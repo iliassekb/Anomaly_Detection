@@ -1,0 +1,29 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+.venv/
+venv/
+dist/
+build/
+
+# Data & checkpoints (too large for git)
+data/raw/
+data/processed/
+experiments/checkpoints/
+experiments/results/
+
+# Notebooks checkpoints
+.ipynb_checkpoints/
+
+# Virtual env
+pfe_env/
+
+# Large media
+output.mp4
+test_video*.mp4
+resultats/
+
+# IDE
+.vscode/
+.idea/
