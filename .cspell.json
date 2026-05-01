@@ -1,0 +1,18 @@
+{
+  "version": "0.2",
+  "ignorePaths": [],
+  "words": [
+    "imgsz", "IMGSZ", "MJPG", "MJPEG", "DSHOW", "BUFFERSIZE", "FOURCC", "fourcc",
+    "RTSP", "rtsp", "ulaw", "stimeout", "DGRAM", "Normalise",
+    "Camo", "Pavel", "Khlebovich",
+    "xyxy", "xywh", "anom", "anomal", "dets", "imshow", "imwrite",
+    "mvtec", "yolo", "YOLO", "ultralytics", "Ultralytics",
+    "streamlit", "Streamlit", "opencv", "OpenCV",
+    "albumentations", "Albumentations", "patchcore", "fastflow",
+    "Optimised", "colback", "colframe", "tcolorbox", "tikz",
+    "biblatex", "bibtex", "themeblue", "themebluedark", "textmid",
+    "greenok", "reddanger", "codebg", "safefig", "notebox", "infobox",
+    "warnbox", "addcontentsline", "markboth", "fancyhdr", "tocloft",
+    "titlesec", "hypersetup", "addbibresource", "printbibliography"
+  ]
+}

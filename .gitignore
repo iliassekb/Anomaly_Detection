@@ -8,10 +8,12 @@ dist/
 build/
 
 # Data & checkpoints (too large for git)
-data/raw/
-data/processed/
-experiments/checkpoints/
-experiments/results/
+data/
+experiments/
+
+# Model weights (too large for git)
+*.pt
+best/
 
 # Notebooks checkpoints
 .ipynb_checkpoints/
@@ -27,3 +29,10 @@ resultats/
 # IDE
 .vscode/
 .idea/
+
+# Documentation
+docs/
+Cahier_des_Charges_Detection_Anomalies_3D_Industrielles.pdf
+
+# Docker
+Dockerfile

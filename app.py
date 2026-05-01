@@ -133,13 +133,18 @@ def make_css(t: dict) -> str:
     border-radius: 10px;
     padding: 4px;
     border: 1px solid {t['border']};
-    gap: 2px;
+    display: flex !important;
+    justify-content: space-evenly !important;
+    gap: 0px;
 }}
 [data-testid="stTabs"] [data-baseweb="tab"] {{
     border-radius: 7px;
     color: {t['t2']} !important;
     font-weight: 500;
     font-size: 13px;
+    flex: 1 1 0 !important;
+    text-align: center !important;
+    justify-content: center !important;
 }}
 [data-testid="stTabs"] [aria-selected="true"] {{
     background: {t['tab_sel_bg']} !important;
@@ -178,6 +183,21 @@ button[kind="primary"]:hover {{
     border: 2px dashed {t['acc']} !important;
     border-radius: 12px !important;
     background: {t['card']} !important;
+    padding: 40px 24px !important;
+    transition: border-color 0.2s, background 0.2s !important;
+}}
+[data-testid="stFileUploader"] section:hover {{
+    border-color: {t['acc_l']} !important;
+    background: {t['border']} !important;
+}}
+[data-testid="stFileUploaderDropzoneInstructions"] div span {{
+    color: {t['t1']} !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+}}
+[data-testid="stFileUploaderDropzoneInstructions"] div small {{
+    color: {t['t2']} !important;
+    font-size: 11px !important;
 }}
 
 [data-testid="stProgressBar"] > div > div {{
@@ -543,7 +563,7 @@ def tiled_inference(
     return result, cell_results
 
 
-def detection_stats(detections: list[dict], class_names: dict) -> None:
+def detection_stats(detections: list[dict]) -> None:
     if not detections:
         st.markdown(
             f'<div style="background:{T["pass_bg"]};border:1px solid {T["pass_border"]};'
@@ -616,7 +636,7 @@ with st.sidebar:
         f'letter-spacing:2.5px;text-transform:uppercase;margin:16px 0 4px 0;">Theme</p>',
         unsafe_allow_html=True,
     )
-    chosen = st.radio("", ["Dark", "Light"], horizontal=True,
+    chosen = st.radio("Theme", ["Dark", "Light"], horizontal=True,
                       index=0 if st.session_state.theme == "Dark" else 1,
                       label_visibility="collapsed")
     if chosen != st.session_state.theme:
@@ -730,116 +750,74 @@ tab_img, tab_vid, tab_cam = st.tabs(["Image", "Video", "Webcam snapshot"])
 # ── IMAGE tab ─────────────────────────────────────────────────────────────────
 
 with tab_img:
+    # ── Upload zone ──────────────────────────────────────────────────────────
+    st.markdown(
+        f'<p style="font-size:9px;color:{T["section_c"]};font-weight:700;'
+        f'letter-spacing:2.5px;text-transform:uppercase;margin:8px 0 10px 0;">'
+        f'Upload Images</p>',
+        unsafe_allow_html=True,
+    )
     uploaded_imgs = st.file_uploader(
-        "Upload images (PNG / JPG)", type=["png", "jpg", "jpeg"], key="img_up",
+        "Drop PNG / JPG images here or click to browse — multiple files supported",
+        type=["png", "jpg", "jpeg"], key="img_up",
         accept_multiple_files=True,
     )
-    grid_mode = st.toggle("Multi-product grid mode", value=False,
-                          help="Divide the image into a grid; one inference per tile.")
-    if grid_mode:
-        gc1, gc2 = st.columns(2)
-        grid_rows = gc1.number_input("Rows",    min_value=1, max_value=10, value=3)
-        grid_cols = gc2.number_input("Columns", min_value=1, max_value=10, value=3)
-        st.caption(
-            f"Image split into **{grid_rows} x {grid_cols} = "
-            f"{grid_rows * grid_cols} tiles**, one inference per tile."
-        )
 
     for img_idx, uploaded_img in enumerate(uploaded_imgs or []):
         if len(uploaded_imgs) > 1:
             st.markdown(
-                f'<div style="border-top:1px solid {T["border"]};margin:20px 0 14px 0;'
-                f'padding-top:14px;font-size:12px;color:{T["t2"]};font-weight:600;">'
-                f'{uploaded_img.name}</div>',
+                f'<div style="border-top:1px solid {T["border"]};margin:28px 0 16px 0;'
+                f'padding-top:16px;display:flex;align-items:center;gap:10px;">'
+                f'<span style="font-size:9px;color:{T["section_c"]};font-weight:700;'
+                f'letter-spacing:2px;text-transform:uppercase;">Image</span>'
+                f'<span style="font-size:12px;color:{T["t1"]};font-weight:600;">'
+                f'{uploaded_img.name}</span></div>',
                 unsafe_allow_html=True,
             )
 
-        file_bytes     = np.frombuffer(uploaded_img.read(), np.uint8)
-        frame_raw      = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-        orig_h, orig_w = frame_raw.shape[:2]
-        frame_bgr      = frame_raw
+        file_bytes = np.frombuffer(uploaded_img.read(), np.uint8)
+        frame_raw  = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+        frame_bgr  = frame_raw
 
-        if grid_mode:
-            with st.spinner(f"Running {grid_rows * grid_cols} tile inferences..."):
-                t0 = time.time()
-                annotated, cell_results = tiled_inference(
-                    frame_bgr, model,
-                    rows=grid_rows, cols=grid_cols,
-                    imgsz=imgsz, conf_thr=conf_thr, iou_thr=iou_thr,
-                    device=device, class_names=class_names,
-                )
-                elapsed = time.time() - t0
+        with st.spinner("Running inference..."):
+            t0        = time.time()
+            prod_mask = extract_product_mask(frame_bgr) if isolate else None
+            results   = model.predict(frame_bgr, imgsz=imgsz, conf=conf_thr,
+                                      iou=iou_thr, device=device,
+                                      save=False, verbose=False)
+            elapsed   = time.time() - t0
 
-            col_orig, col_ann = st.columns(2)
-            with col_orig:
-                st.markdown("**Original**")
-                st.image(bgr_to_pil(frame_raw), use_container_width=True)
-            with col_ann:
-                st.markdown("**Annotated**")
-                st.image(bgr_to_pil(annotated), use_container_width=True)
+        annotated, detections = annotate_frame(
+            frame_bgr.copy(), results[0], class_names, conf_thr,
+            product_mask=prod_mask, mask_overlap_thr=mask_overlap_thr,
+        )
 
-            st.markdown(_inf_pill(elapsed * 1000,
-                        f" &nbsp;|&nbsp; {elapsed*1000/max(grid_rows*grid_cols,1):.0f} ms / tile"),
-                        unsafe_allow_html=True)
-
-            st.markdown("#### Per-product results")
-            n_anomalies = sum(1 for c in cell_results if c["is_anomaly"])
-            m1, m2, m3  = st.columns(3)
-            m1.metric("Total products", len(cell_results))
-            m2.metric("Anomalies",  n_anomalies,
-                      delta=f"{n_anomalies/len(cell_results)*100:.0f}%",
-                      delta_color="inverse")
-            m3.metric("Normal", len(cell_results) - n_anomalies)
-
-            rows_data = []
-            for cell in cell_results:
-                if cell["is_anomaly"]:
-                    types     = list(dict.fromkeys(d["class"] for d in cell["detections"]))
-                    best_conf = max(d["conf"] for d in cell["detections"])
-                    status    = f"ANOMALY — {', '.join(types)}"
-                    conf_str  = f"{best_conf*100:.0f}%"
-                else:
-                    status, conf_str = "PASS", "—"
-                rows_data.append({
-                    "Product":       f"P{cell['product_id']}",
-                    "Grid position": f"row {cell['cell'][0]+1}, col {cell['cell'][1]+1}",
-                    "Status":        status,
-                    "Confidence":    conf_str,
-                })
-            st.dataframe(rows_data, use_container_width=True, hide_index=True)
-
-            all_dets = [d for c in cell_results for d in c["detections"]]
-            if all_dets:
-                st.markdown("#### Defect breakdown")
-                detection_stats(all_dets, class_names)
-
-        else:
-            with st.spinner("Running inference..."):
-                t0        = time.time()
-                prod_mask = extract_product_mask(frame_bgr) if isolate else None
-                results   = model.predict(frame_bgr, imgsz=imgsz, conf=conf_thr,
-                                          iou=iou_thr, device=device,
-                                          save=False, verbose=False)
-                elapsed   = time.time() - t0
-
-            annotated, detections = annotate_frame(
-                frame_bgr.copy(), results[0], class_names, conf_thr,
-                product_mask=prod_mask, mask_overlap_thr=mask_overlap_thr,
+        col_orig, col_ann = st.columns(2)
+        with col_orig:
+            st.markdown(
+                f'<p style="font-size:10px;font-weight:700;letter-spacing:1.5px;'
+                f'text-transform:uppercase;color:{T["t2"]};margin-bottom:6px;">Original</p>',
+                unsafe_allow_html=True,
             )
+            st.image(bgr_to_pil(frame_raw), use_container_width=True)
+        with col_ann:
+            st.markdown(
+                f'<p style="font-size:10px;font-weight:700;letter-spacing:1.5px;'
+                f'text-transform:uppercase;color:{T["acc_l"]};margin-bottom:6px;">Annotated</p>',
+                unsafe_allow_html=True,
+            )
+            st.image(bgr_to_pil(annotated), use_container_width=True)
 
-            col_orig, col_ann = st.columns(2)
-            with col_orig:
-                st.markdown("**Original**")
-                st.image(bgr_to_pil(frame_raw), use_container_width=True)
-            with col_ann:
-                st.markdown("**Annotated**")
-                st.image(bgr_to_pil(annotated), use_container_width=True)
+        st.markdown(_inf_pill(elapsed * 1000), unsafe_allow_html=True)
+        st.markdown(
+            f'<p style="font-size:9px;color:{T["section_c"]};font-weight:700;'
+            f'letter-spacing:2.5px;text-transform:uppercase;margin:18px 0 10px 0;">'
+            f'Detection Results</p>',
+            unsafe_allow_html=True,
+        )
+        detection_stats(detections)
 
-            st.markdown(_inf_pill(elapsed * 1000), unsafe_allow_html=True)
-            st.markdown("#### Detection results")
-            detection_stats(detections, class_names)
-
-        buf     = io.BytesIO()
+        buf = io.BytesIO()
         bgr_to_pil(annotated).save(buf, format="PNG")
         st.download_button("Download annotated image", buf.getvalue(),
                            file_name=f"annotated_{uploaded_img.name}",
@@ -925,7 +903,7 @@ with tab_vid:
 
             st.success(f"Done — {frame_idx} frames processed.")
             st.markdown("#### Overall detections")
-            detection_stats(all_dets2, class_names)
+            detection_stats(all_dets2)
 
             with open(out_tmp.name, "rb") as f:
                 st.download_button("Download annotated video", f.read(),
@@ -933,32 +911,106 @@ with tab_vid:
 
 # ── WEBCAM tab ────────────────────────────────────────────────────────────────
 
-with tab_cam:
+def _run_inference_on_frame(frame_bgr: np.ndarray) -> None:
+    frame_raw = frame_bgr.copy()
+    with st.spinner("Running inference..."):
+        t0        = time.time()
+        prod_mask = extract_product_mask(frame_bgr) if isolate else None
+        results   = model.predict(frame_bgr, imgsz=imgsz, conf=conf_thr,
+                                  iou=iou_thr, device=device,
+                                  save=False, verbose=False)
+        elapsed   = time.time() - t0
+    annotated, detections = annotate_frame(
+        frame_bgr.copy(), results[0], class_names, conf_thr,
+        product_mask=prod_mask, mask_overlap_thr=mask_overlap_thr,
+    )
+    col_orig, col_ann = st.columns(2)
+    with col_orig:
+        st.markdown(
+            f'<p style="font-size:10px;font-weight:700;letter-spacing:1.5px;'
+            f'text-transform:uppercase;color:{T["t2"]};margin-bottom:6px;">Original</p>',
+            unsafe_allow_html=True,
+        )
+        st.image(bgr_to_pil(frame_raw), use_container_width=True)
+    with col_ann:
+        st.markdown(
+            f'<p style="font-size:10px;font-weight:700;letter-spacing:1.5px;'
+            f'text-transform:uppercase;color:{T["acc_l"]};margin-bottom:6px;">Annotated</p>',
+            unsafe_allow_html=True,
+        )
+        st.image(bgr_to_pil(annotated), use_container_width=True)
+    st.markdown(_inf_pill(elapsed * 1000), unsafe_allow_html=True)
     st.markdown(
-        f'<p style="color:{T["t2"]};font-size:13px;margin-bottom:12px;">'
-        f'Capture a snapshot — the model runs on the image immediately.</p>',
+        f'<p style="font-size:9px;color:{T["section_c"]};font-weight:700;'
+        f'letter-spacing:2.5px;text-transform:uppercase;margin:18px 0 10px 0;">'
+        f'Detection Results</p>',
         unsafe_allow_html=True,
     )
-    cam_image = st.camera_input("Capture")
+    detection_stats(detections)
 
-    if cam_image:
-        file_bytes = np.frombuffer(cam_image.read(), np.uint8)
-        frame_bgr  = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
 
-        with st.spinner("Running inference..."):
-            t0        = time.time()
-            prod_mask = extract_product_mask(frame_bgr) if isolate else None
-            results   = model.predict(frame_bgr, imgsz=imgsz, conf=conf_thr,
-                                      iou=iou_thr, device=device,
-                                      save=False, verbose=False)
-            elapsed   = time.time() - t0
+with tab_cam:
+    # ── Mode selector ─────────────────────────────────────────────────────────
+    st.markdown(
+        f'<p style="font-size:9px;color:{T["section_c"]};font-weight:700;'
+        f'letter-spacing:2.5px;text-transform:uppercase;margin:8px 0 10px 0;">'
+        f'Camera Source</p>',
+        unsafe_allow_html=True,
+    )
+    cam_mode = st.radio(
+        "Camera source",
+        ["Browser / Smartphone", "Connected camera (USB / external)"],
+        label_visibility="collapsed",
+    )
 
-        annotated, detections = annotate_frame(
-            frame_bgr.copy(), results[0], class_names, conf_thr,
-            product_mask=prod_mask, mask_overlap_thr=mask_overlap_thr,
+    # ── MODE 1 : Browser camera ───────────────────────────────────────────────
+    if cam_mode == "Browser / Smartphone":
+        st.markdown(
+            f'<div style="background:{T["card"]};border:1px solid {T["border"]};'
+            f'border-radius:10px;padding:14px 18px;margin-bottom:16px;">'
+            f'<div style="font-size:13px;font-weight:600;color:{T["t1"]};">Browser camera</div>'
+            f'<div style="font-size:11px;color:{T["t2"]};margin-top:4px;">'
+            f'Works on any device that opens this app — laptop webcam, tablet, or smartphone.'
+            f' On a phone, open the Network URL shown in the terminal and tap the capture button.'
+            f'</div></div>',
+            unsafe_allow_html=True,
         )
-        st.image(bgr_to_pil(annotated), caption="Annotated snapshot",
-                 use_container_width=True)
-        st.markdown(_inf_pill(elapsed * 1000), unsafe_allow_html=True)
-        st.markdown("#### Detection results")
-        detection_stats(detections, class_names)
+        cam_image = st.camera_input("Capture", label_visibility="collapsed")
+        if cam_image:
+            file_bytes = np.frombuffer(cam_image.read(), np.uint8)
+            frame_bgr  = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+            _run_inference_on_frame(frame_bgr)
+
+    # ── MODE 2 : Connected camera (OpenCV) ────────────────────────────────────
+    else:
+        st.markdown(
+            f'<div style="background:{T["card"]};border:1px solid {T["border"]};'
+            f'border-radius:10px;padding:14px 18px;margin-bottom:16px;">'
+            f'<div style="font-size:13px;font-weight:600;color:{T["t1"]};">Connected camera</div>'
+            f'<div style="font-size:11px;color:{T["t2"]};margin-top:4px;">'
+            f'Captures directly from a camera connected to this machine via USB or driver '
+            f'(e.g. DroidCam, EpocCam, virtual camera). '
+            f'Device 0 = built-in, 1 = first external, 2 = second external, etc.'
+            f'</div></div>',
+            unsafe_allow_html=True,
+        )
+        dev_col, btn_col = st.columns([2, 3])
+        cam_idx  = dev_col.number_input("Device index", min_value=0, max_value=10,
+                                        value=0, step=1,
+                                        help="0 = built-in webcam, 1 = first USB camera, etc.")
+        capture  = btn_col.button("Capture snapshot", type="primary",
+                                  use_container_width=True)
+
+        if capture:
+            cap = cv2.VideoCapture(int(cam_idx))
+            if not cap.isOpened():
+                st.error(f"Could not open camera device {int(cam_idx)}. "
+                         f"Check the index or make sure the camera is connected.")
+            else:
+                cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                ok, frame = cap.read()
+                cap.release()
+                if not ok or frame is None:
+                    st.error("Camera opened but failed to capture a frame. Try again.")
+                else:
+                    _run_inference_on_frame(frame)

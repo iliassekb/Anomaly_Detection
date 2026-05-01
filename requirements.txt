@@ -1,8 +1,5 @@
-streamlit>=1.35
-torch>=2.0
-torchvision
-ultralytics>=8.0
-opencv-python-headless
-numpy
-Pillow
-matplotlib
+opencv-python>=4.8.0
+ultralytics>=8.0.0
+numpy>=1.24.0
+torch>=2.0.0
+torchvision>=0.15.0

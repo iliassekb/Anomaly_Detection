@@ -1,0 +1,12 @@
+pfe_env/
+__pycache__/
+*.pyc
+*.pyo
+.git/
+data/
+notebooks/
+experiments/
+resultats/
+output.mp4
+test_video*.mp4
+docs/
