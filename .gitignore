@@ -36,3 +36,6 @@ Cahier_des_Charges_Detection_Anomalies_3D_Industrielles.pdf
 
 # Docker
 Dockerfile
+
+# Streamlit Cloud
+.streamlit/secrets.toml

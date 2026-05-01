@@ -3,9 +3,14 @@ headless = true
 port = 8501
 enableXsrfProtection = true
 maxUploadSize = 200
+enableCORS = false
 
 [browser]
 gatherUsageStats = false
+serverAddress = "0.0.0.0"
 
 [theme]
 base = "dark"
+
+[logger]
+level = "info"
