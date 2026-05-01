@@ -1,3 +1,15 @@
+---
+title: DefectVision - 3D Industrial Anomaly Detection
+emoji: 🔍
+colorFrom: indigo
+colorTo: blue
+sdk: streamlit
+sdk_version: 1.28.0
+app_file: app.py
+pinned: false
+license: mit
+---
+
 # DefectVision - 3D Industrial Anomaly Detection
 
 Real-time anomaly detection system for industrial quality control using YOLO and computer vision.
@@ -17,23 +29,21 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-### Streamlit Cloud Deployment
+### Hugging Face Spaces Deployment
 
-1. **Connect your repository**
-   - Go to [share.streamlit.io](https://share.streamlit.io)
-   - Click "New app"
-   - Connect your GitLab account
-   - Select this repository
+1. **Create a new Space**
+   - Go to [huggingface.co/new-space](https://huggingface.co/new-space)
+   - Space name: `defectvision`
+   - SDK: `Streamlit`
+   - Visibility: `Public` or `Private`
 
-2. **Configure deployment**
-   - **Repository**: `imad.sanoussi.mail-group/defectvision`
-   - **Branch**: `main`
-   - **Main file path**: `app.py`
-   - **Python version**: `3.9+` (recommended 3.10)
+2. **Connect repository**
+   - Link to your GitLab repository
+   - Or clone and push directly to Hugging Face Hub
 
 3. **Deploy**
-   - Click "Deploy new app"
-   - Wait for build completion (2-3 minutes)
+   - Automatic build and deployment
+   - URL: `https://your-username-defectvision.hf.space`
 
 ## 📋 Requirements
 
