@@ -1108,7 +1108,6 @@ with tab_cam:
                 video_processor_factory=_RTProcessor,
                 rtc_configuration=_RTC_CONFIG,
                 media_stream_constraints={"video": True, "audio": False},
-                async_processing=True,
             )
 
     # ── MODE 2 : Browser snapshot ─────────────────────────────────────────────
