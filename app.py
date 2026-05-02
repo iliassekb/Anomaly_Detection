@@ -17,26 +17,6 @@ import torch
 from PIL import Image
 from ultralytics import YOLO
 
-try:
-    from streamlit_webrtc import webrtc_streamer, VideoProcessorBase, RTCConfiguration
-    import av
-    _WEBRTC = True
-except ImportError:
-    _WEBRTC = False
-
-_RTC_CONFIG = (RTCConfiguration({"iceServers": [
-    {"urls": ["stun:stun.l.google.com:19302"]},
-    {"urls": ["stun:stun1.l.google.com:19302"]},
-    {"urls": ["turn:openrelay.metered.ca:80"],
-     "username": "openrelayproject",
-     "credential": "openrelayproject"},
-    {"urls": ["turn:openrelay.metered.ca:443"],
-     "username": "openrelayproject",
-     "credential": "openrelayproject"},
-    {"urls": ["turn:openrelay.metered.ca:443?transport=tcp"],
-     "username": "openrelayproject",
-     "credential": "openrelayproject"},
-]}) if _WEBRTC else None)
 
 torch.load = functools.partial(torch.load, weights_only=False)
 
@@ -1016,126 +996,87 @@ with tab_cam:
     )
     cam_mode = st.radio(
         "Camera source",
-        ["Real-time (WebRTC)", "Browser / Smartphone (snapshot)",
-         "Connected camera (USB / external)"],
+        ["Live detection (browser)", "Connected camera (USB / external)"],
         label_visibility="collapsed",
     )
 
-    # ── MODE 1 : Real-time WebRTC ─────────────────────────────────────────────
-    if cam_mode == "Real-time (WebRTC)":
-        if not _WEBRTC:
-            st.error("streamlit-webrtc is not installed. Add `streamlit-webrtc>=0.47.0` "
-                     "and `av>=10.0.0` to requirements.txt and restart.")
-        else:
-            st.markdown(
-                f'<div style="background:{T["card"]};border:1px solid {T["border"]};'
-                f'border-radius:10px;padding:14px 18px;margin-bottom:16px;">'
-                f'<div style="font-size:13px;font-weight:600;color:{T["t1"]};">'
-                f'Real-time detection</div>'
-                f'<div style="font-size:11px;color:{T["t2"]};margin-top:4px;">'
-                f'Streams your camera through the browser and runs YOLO on every frame. '
-                f'Works with any webcam, virtual camera (iVCam, DroidCam, EpocCam) or '
-                f'phone camera. Click <b>START</b> and allow camera access.'
-                f'</div></div>',
-                unsafe_allow_html=True,
-            )
-
-            # Snapshot sidebar params for the processor closure
-            _conf = conf_thr
-            _iou  = iou_thr
-            _sz   = imgsz
-            _iso  = isolate
-            _mo   = mask_overlap_thr
-            _dev  = device
-
-            # Per-class colours matching the desktop realtime script
-            _CLS_COLORS = [
-                (220,  60,   0), (  0, 180, 220), (180,   0, 220),
-                (220, 180,   0), (  0, 220, 160), (220,  80,  80),
-                ( 80,  80, 220), (  0,  60, 220),
-            ]
-
-            class _RTProcessor(VideoProcessorBase):
-                def __init__(self):
-                    self._fps   = 0.0
-                    self._t0    = time.time()
-                    self._n_det = 0
-
-                # ── HUD overlay identical to the desktop script ───────────────
-                def _draw_hud(self, frame: np.ndarray, dets: list) -> np.ndarray:
-                    n_anom  = len(dets)
-                    is_pass = n_anom == 0
-                    status  = ("PASS" if is_pass
-                               else f"FAIL  ({n_anom} anomal{'y' if n_anom==1 else 'ies'})")
-                    s_color = (0, 200, 80) if is_pass else (0, 60, 220)
-
-                    overlay = frame.copy()
-                    cv2.rectangle(overlay, (8, 8), (310, 162), (10, 10, 10), -1)
-                    cv2.addWeighted(overlay, 0.60, frame, 0.40, 0, frame)
-
-                    lines = [
-                        (f"FPS   {self._fps:5.1f}",                    (255, 255, 255)),
-                        (f"imgsz {_sz}",                               (255, 255, 255)),
-                        (f"conf  {_conf:.2f}",                         (255, 255, 255)),
-                        (f"dets  {self._n_det}",                       (255, 255, 255)),
-                        (f"device {_dev.upper()} FP32",                (255, 255, 255)),
-                        (f"► {status}",                                 s_color),
-                    ]
-                    y = 32
-                    for text, color in lines:
-                        cv2.putText(frame, text, (18, y),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.52,
-                                    color, 1, cv2.LINE_AA)
-                        y += 22
-                    return frame
-
-                def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
-                    t0  = time.time()
-                    img = frame.to_ndarray(format="bgr24")
-                    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-
-                    pm  = extract_product_mask(img) if _iso else None
-                    res = model.predict(img, imgsz=_sz, conf=_conf, iou=_iou,
-                                        device=_dev, save=False, verbose=False)
-                    ann, dets = annotate_frame(
-                        img.copy(), res[0], class_names, _conf,
-                        product_mask=pm, mask_overlap_thr=_mo,
-                    )
-
-                    # FPS rolling estimate (single-frame delta)
-                    elapsed    = max(time.time() - t0, 1e-6)
-                    self._fps  = 0.8 * self._fps + 0.2 * (1.0 / elapsed)
-                    self._n_det = len(dets)
-
-                    ann = self._draw_hud(ann, dets)
-                    return av.VideoFrame.from_ndarray(
-                        cv2.cvtColor(ann, cv2.COLOR_BGR2RGB), format="rgb24"
-                    )
-
-            webrtc_streamer(
-                key="dv-realtime",
-                video_processor_factory=_RTProcessor,
-                rtc_configuration=_RTC_CONFIG,
-                media_stream_constraints={"video": True, "audio": False},
-            )
-
-    # ── MODE 2 : Browser snapshot ─────────────────────────────────────────────
-    elif cam_mode == "Browser / Smartphone (snapshot)":
+    # ── MODE 1 : Live detection (browser camera) ──────────────────────────────
+    if cam_mode == "Live detection (browser)":
         st.markdown(
             f'<div style="background:{T["card"]};border:1px solid {T["border"]};'
             f'border-radius:10px;padding:14px 18px;margin-bottom:16px;">'
-            f'<div style="font-size:13px;font-weight:600;color:{T["t1"]};">Browser camera</div>'
+            f'<div style="font-size:13px;font-weight:600;color:{T["t1"]};">'
+            f'Live detection</div>'
             f'<div style="font-size:11px;color:{T["t2"]};margin-top:4px;">'
-            f'Works on any device that opens this app — laptop webcam, tablet, or smartphone.'
-            f' On a phone, open the Network URL shown in the terminal and tap the capture button.'
+            f'Click <b>Take photo</b> to capture a frame and run YOLO on it. '
+            f'Works with any webcam, virtual camera (iVCam, DroidCam, EpocCam) or phone camera. '
+            f'Click <b>Take another photo</b> to detect the next frame continuously.'
             f'</div></div>',
             unsafe_allow_html=True,
         )
-        cam_image = st.camera_input("Capture", label_visibility="collapsed")
-        if cam_image:
-            file_bytes = np.frombuffer(cam_image.read(), np.uint8)
-            frame_bgr  = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-            _run_inference_on_frame(frame_bgr)
+
+        for _k, _v in [("rt_fps", 0.0), ("rt_t_last", 0.0), ("rt_n_det", 0)]:
+            if _k not in st.session_state:
+                st.session_state[_k] = _v
+
+        col_cam, col_ann = st.columns([1, 1])
+
+        with col_cam:
+            cam_image = st.camera_input("Camera", label_visibility="collapsed")
+
+        with col_ann:
+            result_ph = st.empty()
+            if cam_image is not None:
+                _now = time.time()
+                if st.session_state.rt_t_last > 0:
+                    _dt = max(_now - st.session_state.rt_t_last, 0.001)
+                    st.session_state.rt_fps = (0.7 * st.session_state.rt_fps
+                                               + 0.3 / _dt)
+                st.session_state.rt_t_last = _now
+
+                _fb  = np.frombuffer(cam_image.read(), np.uint8)
+                _frm = cv2.imdecode(_fb, cv2.IMREAD_COLOR)
+                _pm  = extract_product_mask(_frm) if isolate else None
+                _res = model.predict(_frm, imgsz=imgsz, conf=conf_thr, iou=iou_thr,
+                                     device=device, save=False, verbose=False)
+                _ann, _dets = annotate_frame(
+                    _frm.copy(), _res[0], class_names, conf_thr,
+                    product_mask=_pm, mask_overlap_thr=mask_overlap_thr,
+                )
+
+                _n   = len(_dets)
+                _ok  = _n == 0
+                _st  = ("PASS" if _ok
+                        else f"FAIL  ({_n} anomal{'y' if _n == 1 else 'ies'})")
+                _sc  = (0, 200, 80) if _ok else (0, 60, 220)
+
+                _ov = _ann.copy()
+                cv2.rectangle(_ov, (8, 8), (310, 162), (10, 10, 10), -1)
+                cv2.addWeighted(_ov, 0.60, _ann, 0.40, 0, _ann)
+                _y = 32
+                for _txt, _col in [
+                    (f"FPS   {st.session_state.rt_fps:5.1f}", (255, 255, 255)),
+                    (f"imgsz {imgsz}",                         (255, 255, 255)),
+                    (f"conf  {conf_thr:.2f}",                  (255, 255, 255)),
+                    (f"dets  {_n}",                            (255, 255, 255)),
+                    (f"device {device.upper()} FP32",          (255, 255, 255)),
+                    (f"► {_st}",                                _sc),
+                ]:
+                    cv2.putText(_ann, _txt, (18, _y),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.52, _col, 1, cv2.LINE_AA)
+                    _y += 22
+                st.session_state.rt_n_det = _n
+
+                result_ph.image(cv2.cvtColor(_ann, cv2.COLOR_BGR2RGB),
+                                use_column_width=True)
+            else:
+                result_ph.markdown(
+                    f'<div style="display:flex;align-items:center;justify-content:center;'
+                    f'height:300px;background:{T["bg"]};border-radius:8px;'
+                    f'color:{T["t2"]};font-size:13px;">'
+                    f'Capture a frame to see detection</div>',
+                    unsafe_allow_html=True,
+                )
 
     # ── MODE 3 : Connected camera (OpenCV) ────────────────────────────────────
     else:
