@@ -21,27 +21,34 @@ torch.load = functools.partial(torch.load, weights_only=False)
 
 # ── constants ────────────────────────────────────────────────────────────────
 DEFAULT_WEIGHTS = "mvtec3d_anomaly_type3/weights/best.pt"
-HF_MODEL_REPO   = "imad9/defectvision-weights"   # HF model repo hosting best.pt
-HF_FILENAME     = "best.pt"
+HF_SPACE_REPO   = "imad9/defectvision"
+
+
+def _is_lfs_pointer(p: Path) -> bool:
+    """Return True if the file is a Git LFS pointer (~134 bytes) not the real binary."""
+    return p.exists() and p.stat().st_size < 1_000_000
 
 
 def _ensure_weights(weights_path: str) -> None:
-    """Download weights from HF Hub if the file is missing."""
+    """Download weights via HF Hub API if the file is absent or an LFS pointer."""
     p = Path(weights_path)
-    if p.exists():
+    if p.exists() and not _is_lfs_pointer(p):
         return
     try:
         from huggingface_hub import hf_hub_download
+        import shutil
         p.parent.mkdir(parents=True, exist_ok=True)
         downloaded = hf_hub_download(
-            repo_id=HF_MODEL_REPO,
-            filename=HF_FILENAME,
-            local_dir=str(p.parent),
+            repo_id=HF_SPACE_REPO,
+            repo_type="space",
+            filename=weights_path,
+            local_dir=".",
         )
-        if Path(downloaded) != p:
-            Path(downloaded).rename(p)
+        dl = Path(downloaded)
+        if dl.resolve() != p.resolve() and dl.exists():
+            shutil.copy2(dl, p)
     except Exception:
-        pass  # caller checks p.exists() after this
+        pass
 
 
 _ensure_weights(DEFAULT_WEIGHTS)
