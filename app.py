@@ -1013,31 +1013,51 @@ with tab_cam:
         else:
             st.markdown(
                 f'<div style="background:{T["card"]};border:1px solid {T["border"]};'
-                f'border-radius:10px;padding:14px 18px;margin-bottom:16px;">'
+                f'border-radius:10px;padding:14px 18px;margin-bottom:12px;">'
                 f'<div style="font-size:13px;font-weight:600;color:{T["t1"]};">'
                 f'Real-time detection</div>'
                 f'<div style="font-size:11px;color:{T["t2"]};margin-top:4px;">'
-                f'Press <b>START</b>, allow camera access, and YOLO runs on every frame '
-                f'automatically. Works on laptop, phone (open this URL in your mobile '
-                f'browser), tablet, or any device with a camera.'
+                f'Press <b>START</b> and allow camera access — YOLO runs on every '
+                f'frame automatically with no clicking. Open this page on your '
+                f'phone to use the phone camera.'
                 f'</div></div>',
                 unsafe_allow_html=True,
             )
 
             for _k, _v in [("rt_running", False), ("rt_fps", 0.0),
-                            ("rt_t_last", 0.0), ("rt_n_det", 0)]:
+                            ("rt_t_last", 0.0), ("rt_n_det", 0),
+                            ("rt_last_frame", None)]:
                 if _k not in st.session_state:
                     st.session_state[_k] = _v
 
             _btn_label = "⏹  STOP" if st.session_state.rt_running else "▶  START"
             if st.button(_btn_label, type="primary", key="rt_toggle"):
                 st.session_state.rt_running = not st.session_state.rt_running
+                if not st.session_state.rt_running:
+                    st.session_state.rt_last_frame = None
                 st.rerun()
 
             if st.session_state.rt_running:
-                _result_ph = st.empty()
-                _cam_frame  = _cam_live(key="rt_cam", debounce=0,
-                                        label_visibility="collapsed")
+                # ── Show the last annotated frame (stored in session_state so
+                #    there is no blank flash between reruns) ───────────────────
+                if st.session_state.rt_last_frame is not None:
+                    st.image(st.session_state.rt_last_frame,
+                             use_column_width=True)
+                else:
+                    st.markdown(
+                        f'<div style="display:flex;align-items:center;'
+                        f'justify-content:center;height:280px;'
+                        f'background:{T["bg"]};border-radius:8px;'
+                        f'color:{T["t2"]};font-size:13px;">'
+                        f'Waiting for camera…</div>',
+                        unsafe_allow_html=True,
+                    )
+
+                # ── Camera widget — streams frames from the device camera ──────
+                # (browser-side, works on PC, phone, tablet)
+                st.caption("Camera feed  ↓  (allow access when prompted)")
+                _cam_frame = _cam_live(key="rt_cam", debounce=0,
+                                       label_visibility="collapsed")
 
                 if _cam_frame is not None:
                     _now = time.time()
@@ -1080,20 +1100,12 @@ with tab_cam:
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.52,
                                     _col, 1, cv2.LINE_AA)
                         _y += 22
-                    st.session_state.rt_n_det = _n
 
-                    _result_ph.image(cv2.cvtColor(_ann, cv2.COLOR_BGR2RGB),
-                                     use_column_width=True)
+                    st.session_state.rt_n_det    = _n
+                    st.session_state.rt_last_frame = cv2.cvtColor(
+                        _ann, cv2.COLOR_BGR2RGB)
                     st.rerun()
                 else:
-                    _result_ph.markdown(
-                        f'<div style="display:flex;align-items:center;'
-                        f'justify-content:center;height:300px;'
-                        f'background:{T["bg"]};border-radius:8px;'
-                        f'color:{T["t2"]};font-size:13px;">'
-                        f'Waiting for camera…</div>',
-                        unsafe_allow_html=True,
-                    )
                     time.sleep(0.05)
                     st.rerun()
 
