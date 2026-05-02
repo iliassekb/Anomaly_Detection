@@ -558,8 +558,22 @@ def _pick_source() -> int | str:
         print("  Please enter 0, 1 or 2.")
 
 
+def _find_weights() -> str:
+    """Return the first available .pt file: best.pt → last.pt → any .pt found."""
+    base = Path(__file__).parent / "mvtec3d_anomaly_type3" / "weights"
+    for name in ("best.pt", "last.pt"):
+        p = base / name
+        if p.exists() and p.stat().st_size > 1_000_000:
+            return str(p)
+    candidates = sorted(base.glob("*.pt"))
+    candidates = [p for p in candidates if p.stat().st_size > 1_000_000]
+    if candidates:
+        return str(candidates[0])
+    raise FileNotFoundError(f"No valid .pt weights found in {base}")
+
+
 def main():
-    MODEL_PATH = "mvtec3d_anomaly_type3/weights/best.pt"
+    MODEL_PATH = _find_weights()
     CONF       = 0.25
     IMGSZ      = 640        # 320 → max speed | 640 → balanced | 800 → accuracy
     WIDTH      = 1280
