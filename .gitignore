@@ -1,0 +1,41 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+.venv/
+venv/
+dist/
+build/
+
+# Data & checkpoints (too large for git)
+data/
+experiments/
+
+# Model weights (too large for git)
+*.pt
+best/
+
+# Notebooks checkpoints
+.ipynb_checkpoints/
+
+# Virtual env
+pfe_env/
+
+# Large media
+output.mp4
+test_video*.mp4
+resultats/
+
+# IDE
+.vscode/
+.idea/
+
+# Documentation
+docs/
+Cahier_des_Charges_Detection_Anomalies_3D_Industrielles.pdf
+
+# Docker
+Dockerfile
+
+# Streamlit Cloud
+.streamlit/secrets.toml
