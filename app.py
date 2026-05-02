@@ -1031,28 +1031,77 @@ with tab_cam:
                 unsafe_allow_html=True,
             )
 
-            # Capture sidebar params into local variables for the closure
+            # Snapshot sidebar params for the processor closure
             _conf = conf_thr
             _iou  = iou_thr
             _sz   = imgsz
             _iso  = isolate
             _mo   = mask_overlap_thr
+            _dev  = device
+
+            # Per-class colours matching the desktop realtime script
+            _CLS_COLORS = [
+                (220,  60,   0), (  0, 180, 220), (180,   0, 220),
+                (220, 180,   0), (  0, 220, 160), (220,  80,  80),
+                ( 80,  80, 220), (  0,  60, 220),
+            ]
 
             class _RTProcessor(VideoProcessorBase):
+                def __init__(self):
+                    self._fps   = 0.0
+                    self._t0    = time.time()
+                    self._n_det = 0
+
+                # ── HUD overlay identical to the desktop script ───────────────
+                def _draw_hud(self, frame: np.ndarray, dets: list) -> np.ndarray:
+                    n_anom  = len(dets)
+                    is_pass = n_anom == 0
+                    status  = ("PASS" if is_pass
+                               else f"FAIL  ({n_anom} anomal{'y' if n_anom==1 else 'ies'})")
+                    s_color = (0, 200, 80) if is_pass else (0, 60, 220)
+
+                    overlay = frame.copy()
+                    cv2.rectangle(overlay, (8, 8), (310, 162), (10, 10, 10), -1)
+                    cv2.addWeighted(overlay, 0.60, frame, 0.40, 0, frame)
+
+                    lines = [
+                        (f"FPS   {self._fps:5.1f}",                    (255, 255, 255)),
+                        (f"imgsz {_sz}",                               (255, 255, 255)),
+                        (f"conf  {_conf:.2f}",                         (255, 255, 255)),
+                        (f"dets  {self._n_det}",                       (255, 255, 255)),
+                        (f"device {_dev.upper()} FP32",                (255, 255, 255)),
+                        (f"► {status}",                                 s_color),
+                    ]
+                    y = 32
+                    for text, color in lines:
+                        cv2.putText(frame, text, (18, y),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.52,
+                                    color, 1, cv2.LINE_AA)
+                        y += 22
+                    return frame
+
                 def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
+                    t0  = time.time()
                     img = frame.to_ndarray(format="bgr24")
                     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+
                     pm  = extract_product_mask(img) if _iso else None
-                    res = model.predict(
-                        img, imgsz=_sz, conf=_conf, iou=_iou,
-                        device=device, save=False, verbose=False,
-                    )
-                    ann, _ = annotate_frame(
+                    res = model.predict(img, imgsz=_sz, conf=_conf, iou=_iou,
+                                        device=_dev, save=False, verbose=False)
+                    ann, dets = annotate_frame(
                         img.copy(), res[0], class_names, _conf,
                         product_mask=pm, mask_overlap_thr=_mo,
                     )
-                    ann_rgb = cv2.cvtColor(ann, cv2.COLOR_BGR2RGB)
-                    return av.VideoFrame.from_ndarray(ann_rgb, format="rgb24")
+
+                    # FPS rolling estimate (single-frame delta)
+                    elapsed    = max(time.time() - t0, 1e-6)
+                    self._fps  = 0.8 * self._fps + 0.2 * (1.0 / elapsed)
+                    self._n_det = len(dets)
+
+                    ann = self._draw_hud(ann, dets)
+                    return av.VideoFrame.from_ndarray(
+                        cv2.cvtColor(ann, cv2.COLOR_BGR2RGB), format="rgb24"
+                    )
 
             webrtc_streamer(
                 key="dv-realtime",
