@@ -329,64 +329,63 @@ def post_process_mask(
 
 def extract_product_mask(frame: np.ndarray) -> np.ndarray:
     h, w = frame.shape[:2]
-    bw   = max(8, min(h, w) // 15)
+    bw = max(12, min(h, w) // 10)
 
+    # ── Step 1: LAB colour-distance from border (background estimate) ─────────
     lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB).astype(np.float32)
-    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
-    lab[:, :, 0] = clahe.apply(lab[:, :, 0].astype(np.uint8)).astype(np.float32)
-
-    border_pixels = np.concatenate([
-        lab[:bw, :].reshape(-1, 3), lab[-bw:, :].reshape(-1, 3),
+    border = np.concatenate([
+        lab[:bw].reshape(-1, 3),  lab[-bw:].reshape(-1, 3),
         lab[:, :bw].reshape(-1, 3), lab[:, -bw:].reshape(-1, 3),
     ])
-    bg_lab    = np.median(border_pixels, axis=0)
-    bg_chroma = float(np.sqrt((bg_lab[1] - 128) ** 2 + (bg_lab[2] - 128) ** 2))
+    bg_lab = np.median(border, axis=0)
 
-    diff    = lab - bg_lab
-    dist    = np.sqrt((diff * diff).sum(axis=2))
-    dist_u8 = np.clip(dist / (dist.max() + 1e-6) * 255, 0, 255).astype(np.uint8)
-    _, fg   = cv2.threshold(dist_u8, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    diff = lab - bg_lab
+    dist = np.sqrt((diff ** 2).sum(axis=2))
+    # normalise by 98th-percentile to suppress specular highlights
+    norm = np.clip(dist / (np.percentile(dist, 98) + 1e-6) * 255, 0, 255).astype(np.uint8)
+    _, fg = cv2.threshold(norm, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
-    if bg_chroma < 15:
-        ab_dist = np.sqrt(diff[:, :, 1] ** 2 + diff[:, :, 2] ** 2)
-        l_dist  = np.abs(diff[:, :, 0])
-        fg[(fg == 255) & (ab_dist < 8) & (l_dist < 30)] = 0
+    # border band is always background
+    fg[:bw, :] = 0;  fg[-bw:, :] = 0
+    fg[:, :bw] = 0;  fg[:, -bw:] = 0
 
-    coverage = fg.sum() / 255 / (h * w)
+    # ── Step 2: GrabCut refinement ────────────────────────────────────────────
+    # Use the colour mask as a soft prior so GrabCut handles textured backgrounds,
+    # elongated shapes, and any product colour without a hand-tuned fallback.
+    gc = np.full((h, w), cv2.GC_PR_BGD, np.uint8)
+    gc[fg == 255] = cv2.GC_PR_FGD
+    gc[:bw, :]  = cv2.GC_BGD;  gc[-bw:, :]  = cv2.GC_BGD
+    gc[:, :bw]  = cv2.GC_BGD;  gc[:, -bw:]  = cv2.GC_BGD
+    bdm = np.zeros((1, 65), np.float64)
+    fdm = np.zeros((1, 65), np.float64)
+    try:
+        # downscale for speed; GrabCut is O(pixels)
+        scale = min(1.0, 512 / max(h, w))
+        sw, sh = max(1, int(w * scale)), max(1, int(h * scale))
+        small  = cv2.resize(frame, (sw, sh))
+        gc_s   = cv2.resize(gc, (sw, sh), interpolation=cv2.INTER_NEAREST)
+        cv2.grabCut(small, gc_s, None, bdm, fdm, 5, cv2.GC_INIT_WITH_MASK)
+        gc = cv2.resize(gc_s, (w, h), interpolation=cv2.INTER_NEAREST)
+        fg = np.where((gc == cv2.GC_FGD) | (gc == cv2.GC_PR_FGD),
+                      np.uint8(255), np.uint8(0))
+    except Exception:
+        pass  # keep colour-only fg if GrabCut fails
 
-    if bg_chroma > 15 or not (0.05 < coverage < 0.85):
-        gray    = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        blurred = cv2.GaussianBlur(gray, (0, 0), sigmaX=15)
-        edges   = cv2.Canny(blurred, 15, 50)
-        k_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (17, 17))
-        closed  = cv2.dilate(edges, k_close, iterations=2)
-        tmp     = closed.copy()
-        step    = max(1, min(h, w) // 20)
-        for x in range(0, w, step):
-            for sy in (0, h - 1):
-                if tmp[sy, x] == 0:
-                    cv2.floodFill(tmp, None, (x, sy), 128)
-        for y in range(step, h - step, step):
-            for sx in (0, w - 1):
-                if tmp[y, sx] == 0:
-                    cv2.floodFill(tmp, None, (sx, y), 128)
-        edge_fg  = (tmp == 0).astype(np.uint8) * 255
-        edge_cov = edge_fg.sum() / 255 / (h * w)
-        if 0.05 < edge_cov < 0.85:
-            fg = edge_fg
+    # ── Step 3: morphological clean-up ───────────────────────────────────────
+    k_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (25, 25))
+    fg = cv2.morphologyEx(fg, cv2.MORPH_CLOSE, k_close)
+    k_open  = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9,  9))
+    fg = cv2.morphologyEx(fg, cv2.MORPH_OPEN,  k_open)
 
-    k_open_pre = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-    fg = cv2.morphologyEx(fg, cv2.MORPH_OPEN, k_open_pre)
-
+    # keep only the single largest region
     n, labels, stats, _ = cv2.connectedComponentsWithStats(fg, connectivity=8)
     if n > 1:
         largest = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
         fg = np.where(labels == largest, np.uint8(255), np.uint8(0))
 
-    k_close  = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (21, 21))
-    k_dilate = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
-    fg = cv2.morphologyEx(fg, cv2.MORPH_CLOSE,  k_close)
-    fg = cv2.morphologyEx(fg, cv2.MORPH_DILATE, k_dilate)
+    # slight expansion so the outline doesn't clip product edges
+    k_dil = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
+    fg = cv2.dilate(fg, k_dil)
     return (fg > 0).astype(np.uint8)
 
 
