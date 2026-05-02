@@ -21,6 +21,30 @@ torch.load = functools.partial(torch.load, weights_only=False)
 
 # ── constants ────────────────────────────────────────────────────────────────
 DEFAULT_WEIGHTS = "mvtec3d_anomaly_type3/weights/best.pt"
+HF_MODEL_REPO   = "imad9/defectvision-weights"   # HF model repo hosting best.pt
+HF_FILENAME     = "best.pt"
+
+
+def _ensure_weights(weights_path: str) -> None:
+    """Download weights from HF Hub if the file is missing."""
+    p = Path(weights_path)
+    if p.exists():
+        return
+    try:
+        from huggingface_hub import hf_hub_download
+        p.parent.mkdir(parents=True, exist_ok=True)
+        downloaded = hf_hub_download(
+            repo_id=HF_MODEL_REPO,
+            filename=HF_FILENAME,
+            local_dir=str(p.parent),
+        )
+        if Path(downloaded) != p:
+            Path(downloaded).rename(p)
+    except Exception:
+        pass  # caller checks p.exists() after this
+
+
+_ensure_weights(DEFAULT_WEIGHTS)
 CONF_DEFAULT    = 0.25
 IOU_DEFAULT     = 0.45
 IMGSZ_DEFAULT   = 800
