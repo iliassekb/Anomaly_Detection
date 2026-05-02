@@ -331,60 +331,50 @@ def extract_product_mask(frame: np.ndarray) -> np.ndarray:
     h, w = frame.shape[:2]
     bw = max(12, min(h, w) // 10)
 
-    # ── Step 1: LAB colour-distance from border (background estimate) ─────────
     lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB).astype(np.float32)
-    border = np.concatenate([
-        lab[:bw].reshape(-1, 3),  lab[-bw:].reshape(-1, 3),
-        lab[:, :bw].reshape(-1, 3), lab[:, -bw:].reshape(-1, 3),
-    ])
-    bg_lab = np.median(border, axis=0)
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV).astype(np.float32)
 
-    diff = lab - bg_lab
-    dist = np.sqrt((diff ** 2).sum(axis=2))
-    # normalise by 98th-percentile to suppress specular highlights
-    norm = np.clip(dist / (np.percentile(dist, 98) + 1e-6) * 255, 0, 255).astype(np.uint8)
-    _, fg = cv2.threshold(norm, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    # ── Background estimate from border band ──────────────────────────────────
+    bdr = np.zeros((h, w), dtype=bool)
+    bdr[:bw, :] = bdr[-bw:, :] = bdr[:, :bw] = bdr[:, -bw:] = True
 
-    # border band is always background
-    fg[:bw, :] = 0;  fg[-bw:, :] = 0
-    fg[:, :bw] = 0;  fg[:, -bw:] = 0
+    # LAB: perceptual distance from background colour
+    bg_lab   = np.median(lab[bdr], axis=0)
+    dist_lab = np.sqrt(((lab - bg_lab) ** 2).sum(axis=2))
+    dist_lab /= np.percentile(dist_lab, 97) + 1e-6
 
-    # ── Step 2: GrabCut refinement ────────────────────────────────────────────
-    # Use the colour mask as a soft prior so GrabCut handles textured backgrounds,
-    # elongated shapes, and any product colour without a hand-tuned fallback.
-    gc = np.full((h, w), cv2.GC_PR_BGD, np.uint8)
-    gc[fg == 255] = cv2.GC_PR_FGD
-    gc[:bw, :]  = cv2.GC_BGD;  gc[-bw:, :]  = cv2.GC_BGD
-    gc[:, :bw]  = cv2.GC_BGD;  gc[:, -bw:]  = cv2.GC_BGD
-    bdm = np.zeros((1, 65), np.float64)
-    fdm = np.zeros((1, 65), np.float64)
-    try:
-        # downscale for speed; GrabCut is O(pixels)
-        scale = min(1.0, 512 / max(h, w))
-        sw, sh = max(1, int(w * scale)), max(1, int(h * scale))
-        small  = cv2.resize(frame, (sw, sh))
-        gc_s   = cv2.resize(gc, (sw, sh), interpolation=cv2.INTER_NEAREST)
-        cv2.grabCut(small, gc_s, None, bdm, fdm, 5, cv2.GC_INIT_WITH_MASK)
-        gc = cv2.resize(gc_s, (w, h), interpolation=cv2.INTER_NEAREST)
-        fg = np.where((gc == cv2.GC_FGD) | (gc == cv2.GC_PR_FGD),
-                      np.uint8(255), np.uint8(0))
-    except Exception:
-        pass  # keep colour-only fg if GrabCut fails
+    # HSV saturation: products are typically more saturated than neutral backgrounds
+    bg_sat   = float(np.median(hsv[bdr, 1]))
+    dist_sat = np.clip(hsv[:, :, 1] / (bg_sat + 1e-6) - 1.0, 0, None)
+    dist_sat /= np.percentile(dist_sat, 97) + 1e-6
 
-    # ── Step 3: morphological clean-up ───────────────────────────────────────
-    k_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (25, 25))
+    # Combine: take the stronger signal at each pixel
+    combined = np.clip(np.maximum(dist_lab, dist_sat) * 255, 0, 255).astype(np.uint8)
+    _, fg = cv2.threshold(combined, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+    fg[bdr] = 0  # border is always background
+
+    # ── Morphological cleanup ─────────────────────────────────────────────────
+    k_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (21, 21))
     fg = cv2.morphologyEx(fg, cv2.MORPH_CLOSE, k_close)
     k_open  = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9,  9))
     fg = cv2.morphologyEx(fg, cv2.MORPH_OPEN,  k_open)
 
-    # keep only the single largest region
+    # Keep only the largest connected region
     n, labels, stats, _ = cv2.connectedComponentsWithStats(fg, connectivity=8)
     if n > 1:
         largest = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
         fg = np.where(labels == largest, np.uint8(255), np.uint8(0))
 
-    # slight expansion so the outline doesn't clip product edges
-    k_dil = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
+    # ── Convex hull → always a clean, coherent product outline ───────────────
+    cnts, _ = cv2.findContours(fg, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if cnts:
+        pts  = np.vstack([c.reshape(-1, 2) for c in cnts])
+        hull = cv2.convexHull(pts)
+        fg   = np.zeros((h, w), dtype=np.uint8)
+        cv2.drawContours(fg, [hull], -1, 255, cv2.FILLED)
+
+    k_dil = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11, 11))
     fg = cv2.dilate(fg, k_dil)
     return (fg > 0).astype(np.uint8)
 
