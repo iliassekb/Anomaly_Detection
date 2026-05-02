@@ -20,8 +20,10 @@ from ultralytics import YOLO
 try:
     from streamlit_camera_input_live import camera_input_live as _cam_live
     _CAM_LIVE = True
-except ImportError:
+    _CAM_LIVE_ERR = None
+except Exception as _e:
     _CAM_LIVE = False
+    _CAM_LIVE_ERR = str(_e)
 
 torch.load = functools.partial(torch.load, weights_only=False)
 
@@ -1007,107 +1009,142 @@ with tab_cam:
 
     # ── MODE 1 : Live detection (browser camera) ──────────────────────────────
     if cam_mode == "Live detection (browser)":
-        if not _CAM_LIVE:
-            st.error("streamlit-camera-input-live is not installed. "
-                     "Add it to requirements.txt and restart.")
-        else:
-            st.markdown(
-                f'<div style="background:{T["card"]};border:1px solid {T["border"]};'
-                f'border-radius:10px;padding:14px 18px;margin-bottom:12px;">'
-                f'<div style="font-size:13px;font-weight:600;color:{T["t1"]};">'
-                f'Real-time detection</div>'
-                f'<div style="font-size:11px;color:{T["t2"]};margin-top:4px;">'
-                f'Press <b>START</b> and allow camera access — YOLO runs on every '
-                f'frame automatically with no clicking. Open this page on your '
-                f'phone to use the phone camera.'
-                f'</div></div>',
-                unsafe_allow_html=True,
-            )
+        import streamlit.components.v1 as _cmpv1
 
-            for _k, _v in [("rt_running", False), ("rt_fps", 0.0),
-                            ("rt_t_last", 0.0), ("rt_n_det", 0),
-                            ("rt_last_frame", None)]:
-                if _k not in st.session_state:
-                    st.session_state[_k] = _v
+        st.markdown(
+            f'<div style="background:{T["card"]};border:1px solid {T["border"]};'
+            f'border-radius:10px;padding:14px 18px;margin-bottom:12px;">'
+            f'<div style="font-size:13px;font-weight:600;color:{T["t1"]};">'
+            f'Real-time detection</div>'
+            f'<div style="font-size:11px;color:{T["t2"]};margin-top:4px;">'
+            f'Press <b>START</b> and allow camera access — YOLO runs on every '
+            f'frame automatically. Works on PC, phone, or tablet.'
+            f'</div></div>',
+            unsafe_allow_html=True,
+        )
 
-            _btn_label = "⏹  STOP" if st.session_state.rt_running else "▶  START"
-            if st.button(_btn_label, type="primary", key="rt_toggle"):
-                st.session_state.rt_running = not st.session_state.rt_running
-                if not st.session_state.rt_running:
-                    st.session_state.rt_last_frame = None
-                st.rerun()
+        for _k, _v in [("rt_running", False), ("rt_fps", 0.0),
+                        ("rt_t_last", 0.0), ("rt_n_det", 0),
+                        ("rt_last_frame", None), ("rt_frame_n", 0)]:
+            if _k not in st.session_state:
+                st.session_state[_k] = _v
 
-            if st.session_state.rt_running:
-                # ── Show the last annotated frame (stored in session_state so
-                #    there is no blank flash between reruns) ───────────────────
-                if st.session_state.rt_last_frame is not None:
-                    st.image(st.session_state.rt_last_frame,
-                             use_column_width=True)
-                else:
-                    st.markdown(
-                        f'<div style="display:flex;align-items:center;'
-                        f'justify-content:center;height:280px;'
-                        f'background:{T["bg"]};border-radius:8px;'
-                        f'color:{T["t2"]};font-size:13px;">'
-                        f'Waiting for camera…</div>',
-                        unsafe_allow_html=True,
-                    )
+        _btn_label = "⏹  STOP" if st.session_state.rt_running else "▶  START"
+        if st.button(_btn_label, type="primary", key="rt_toggle"):
+            st.session_state.rt_running = not st.session_state.rt_running
+            if not st.session_state.rt_running:
+                st.session_state.rt_last_frame = None
+                st.session_state.rt_frame_n = 0
+            st.rerun()
 
-                # ── Camera widget — streams frames from the device camera ──────
-                # (browser-side, works on PC, phone, tablet)
-                st.caption("Camera feed  ↓  (allow access when prompted)")
+        if st.session_state.rt_running:
+            # Show last annotated result (no blank flash between reruns)
+            if st.session_state.rt_last_frame is not None:
+                st.image(st.session_state.rt_last_frame, use_column_width=True)
+            else:
+                st.markdown(
+                    f'<div style="display:flex;align-items:center;'
+                    f'justify-content:center;height:280px;'
+                    f'background:{T["bg"]};border-radius:8px;'
+                    f'color:{T["t2"]};font-size:13px;">'
+                    f'Waiting for camera…</div>',
+                    unsafe_allow_html=True,
+                )
+
+            # ── Frame source: prefer streamlit-camera-input-live, fall back
+            #    to st.camera_input() + JavaScript auto-click ─────────────────
+            if _CAM_LIVE:
                 _cam_frame = _cam_live(key="rt_cam", debounce=0,
                                        label_visibility="collapsed")
+            else:
+                # JavaScript MutationObserver: watches the parent DOM and clicks
+                # the Streamlit camera "Take photo" button as soon as it appears.
+                # srcdoc iframes share the parent's origin so window.parent.document
+                # is accessible without cross-origin restrictions.
+                _cmpv1.html("""
+<script>
+(function(){
+  if(window.parent._dvObs) return;
+  var lastClick=0;
+  function clickCam(){
+    var now=Date.now();
+    if(now-lastClick<400) return;
+    try{
+      var btns=window.parent.document.querySelectorAll('button');
+      for(var i=0;i<btns.length;i++){
+        var t=(btns[i].textContent||'').trim();
+        if(/take|photo|snap|capture/i.test(t)){
+          btns[i].click(); lastClick=now; break;
+        }
+      }
+    }catch(e){}
+  }
+  window.parent._dvObs=new MutationObserver(function(){
+    clearTimeout(window.parent._dvT);
+    window.parent._dvT=setTimeout(clickCam,80);
+  });
+  window.parent._dvObs.observe(
+    window.parent.document.body,{childList:true,subtree:true});
+  setInterval(clickCam,900);
+  setTimeout(clickCam,300);
+})();
+</script>
+""", height=0)
+                _cam_key   = f"rt_cam_{st.session_state.rt_frame_n}"
+                _cam_frame = st.camera_input("", label_visibility="collapsed",
+                                              key=_cam_key)
 
-                if _cam_frame is not None:
-                    _now = time.time()
-                    if st.session_state.rt_t_last > 0:
-                        _dt = max(_now - st.session_state.rt_t_last, 0.001)
-                        st.session_state.rt_fps = (0.7 * st.session_state.rt_fps
-                                                   + 0.3 / _dt)
-                    st.session_state.rt_t_last = _now
+            if _cam_frame is not None:
+                _now = time.time()
+                if st.session_state.rt_t_last > 0:
+                    _dt = max(_now - st.session_state.rt_t_last, 0.001)
+                    st.session_state.rt_fps = (0.7 * st.session_state.rt_fps
+                                               + 0.3 / _dt)
+                st.session_state.rt_t_last = _now
 
-                    _fb  = np.frombuffer(_cam_frame.read(), np.uint8)
-                    _frm = cv2.imdecode(_fb, cv2.IMREAD_COLOR)
-                    _pm  = extract_product_mask(_frm) if isolate else None
-                    _res = model.predict(_frm, imgsz=imgsz, conf=conf_thr,
-                                         iou=iou_thr, device=device,
-                                         save=False, verbose=False)
-                    _ann, _dets = annotate_frame(
-                        _frm.copy(), _res[0], class_names, conf_thr,
-                        product_mask=_pm, mask_overlap_thr=mask_overlap_thr,
-                    )
+                _fb  = np.frombuffer(_cam_frame.read(), np.uint8)
+                _frm = cv2.imdecode(_fb, cv2.IMREAD_COLOR)
+                _pm  = extract_product_mask(_frm) if isolate else None
+                _res = model.predict(_frm, imgsz=imgsz, conf=conf_thr,
+                                     iou=iou_thr, device=device,
+                                     save=False, verbose=False)
+                _ann, _dets = annotate_frame(
+                    _frm.copy(), _res[0], class_names, conf_thr,
+                    product_mask=_pm, mask_overlap_thr=mask_overlap_thr,
+                )
 
-                    _n  = len(_dets)
-                    _ok = _n == 0
-                    _st = ("PASS" if _ok
-                           else f"FAIL  ({_n} anomal{'y' if _n == 1 else 'ies'})")
-                    _sc = (0, 200, 80) if _ok else (0, 60, 220)
+                _n  = len(_dets)
+                _ok = _n == 0
+                _st = ("PASS" if _ok
+                       else f"FAIL  ({_n} anomal{'y' if _n == 1 else 'ies'})")
+                _sc = (0, 200, 80) if _ok else (0, 60, 220)
 
-                    _ov = _ann.copy()
-                    cv2.rectangle(_ov, (8, 8), (310, 162), (10, 10, 10), -1)
-                    cv2.addWeighted(_ov, 0.60, _ann, 0.40, 0, _ann)
-                    _y = 32
-                    for _txt, _col in [
-                        (f"FPS   {st.session_state.rt_fps:5.1f}", (255, 255, 255)),
-                        (f"imgsz {imgsz}",                         (255, 255, 255)),
-                        (f"conf  {conf_thr:.2f}",                  (255, 255, 255)),
-                        (f"dets  {_n}",                            (255, 255, 255)),
-                        (f"device {device.upper()} FP32",          (255, 255, 255)),
-                        (f"► {_st}",                                _sc),
-                    ]:
-                        cv2.putText(_ann, _txt, (18, _y),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.52,
-                                    _col, 1, cv2.LINE_AA)
-                        _y += 22
+                _ov = _ann.copy()
+                cv2.rectangle(_ov, (8, 8), (310, 162), (10, 10, 10), -1)
+                cv2.addWeighted(_ov, 0.60, _ann, 0.40, 0, _ann)
+                _y = 32
+                for _txt, _col in [
+                    (f"FPS   {st.session_state.rt_fps:5.1f}", (255, 255, 255)),
+                    (f"imgsz {imgsz}",                         (255, 255, 255)),
+                    (f"conf  {conf_thr:.2f}",                  (255, 255, 255)),
+                    (f"dets  {_n}",                            (255, 255, 255)),
+                    (f"device {device.upper()} FP32",          (255, 255, 255)),
+                    (f"► {_st}",                                _sc),
+                ]:
+                    cv2.putText(_ann, _txt, (18, _y),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.52,
+                                _col, 1, cv2.LINE_AA)
+                    _y += 22
 
-                    st.session_state.rt_n_det    = _n
-                    st.session_state.rt_last_frame = cv2.cvtColor(
-                        _ann, cv2.COLOR_BGR2RGB)
-                    st.rerun()
-                else:
-                    time.sleep(0.05)
-                    st.rerun()
+                st.session_state.rt_n_det    = _n
+                st.session_state.rt_last_frame = cv2.cvtColor(
+                    _ann, cv2.COLOR_BGR2RGB)
+                if not _CAM_LIVE:
+                    st.session_state.rt_frame_n += 1
+                st.rerun()
+            else:
+                time.sleep(0.05)
+                st.rerun()
 
     # ── MODE 3 : Connected camera (OpenCV) ────────────────────────────────────
     else:
