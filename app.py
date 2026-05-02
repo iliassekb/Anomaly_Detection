@@ -17,6 +17,18 @@ import torch
 from PIL import Image
 from ultralytics import YOLO
 
+try:
+    from streamlit_webrtc import webrtc_streamer, VideoProcessorBase, RTCConfiguration
+    import av
+    _WEBRTC = True
+except ImportError:
+    _WEBRTC = False
+
+_RTC_CONFIG = (RTCConfiguration({"iceServers": [
+    {"urls": ["stun:stun.l.google.com:19302"]},
+    {"urls": ["stun:stun1.l.google.com:19302"]},
+]}) if _WEBRTC else None)
+
 torch.load = functools.partial(torch.load, weights_only=False)
 
 # ── constants ────────────────────────────────────────────────────────────────
@@ -995,12 +1007,63 @@ with tab_cam:
     )
     cam_mode = st.radio(
         "Camera source",
-        ["Browser / Smartphone", "Connected camera (USB / external)"],
+        ["Real-time (WebRTC)", "Browser / Smartphone (snapshot)",
+         "Connected camera (USB / external)"],
         label_visibility="collapsed",
     )
 
-    # ── MODE 1 : Browser camera ───────────────────────────────────────────────
-    if cam_mode == "Browser / Smartphone":
+    # ── MODE 1 : Real-time WebRTC ─────────────────────────────────────────────
+    if cam_mode == "Real-time (WebRTC)":
+        if not _WEBRTC:
+            st.error("streamlit-webrtc is not installed. Add `streamlit-webrtc>=0.47.0` "
+                     "and `av>=10.0.0` to requirements.txt and restart.")
+        else:
+            st.markdown(
+                f'<div style="background:{T["card"]};border:1px solid {T["border"]};'
+                f'border-radius:10px;padding:14px 18px;margin-bottom:16px;">'
+                f'<div style="font-size:13px;font-weight:600;color:{T["t1"]};">'
+                f'Real-time detection</div>'
+                f'<div style="font-size:11px;color:{T["t2"]};margin-top:4px;">'
+                f'Streams your camera through the browser and runs YOLO on every frame. '
+                f'Works with any webcam, virtual camera (iVCam, DroidCam, EpocCam) or '
+                f'phone camera. Click <b>START</b> and allow camera access.'
+                f'</div></div>',
+                unsafe_allow_html=True,
+            )
+
+            # Capture sidebar params into local variables for the closure
+            _conf = conf_thr
+            _iou  = iou_thr
+            _sz   = imgsz
+            _iso  = isolate
+            _mo   = mask_overlap_thr
+
+            class _RTProcessor(VideoProcessorBase):
+                def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
+                    img = frame.to_ndarray(format="bgr24")
+                    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+                    pm  = extract_product_mask(img) if _iso else None
+                    res = model.predict(
+                        img, imgsz=_sz, conf=_conf, iou=_iou,
+                        device=device, save=False, verbose=False,
+                    )
+                    ann, _ = annotate_frame(
+                        img.copy(), res[0], class_names, _conf,
+                        product_mask=pm, mask_overlap_thr=_mo,
+                    )
+                    ann_rgb = cv2.cvtColor(ann, cv2.COLOR_BGR2RGB)
+                    return av.VideoFrame.from_ndarray(ann_rgb, format="rgb24")
+
+            webrtc_streamer(
+                key="dv-realtime",
+                video_processor_factory=_RTProcessor,
+                rtc_configuration=_RTC_CONFIG,
+                media_stream_constraints={"video": True, "audio": False},
+                async_processing=True,
+            )
+
+    # ── MODE 2 : Browser snapshot ─────────────────────────────────────────────
+    elif cam_mode == "Browser / Smartphone (snapshot)":
         st.markdown(
             f'<div style="background:{T["card"]};border:1px solid {T["border"]};'
             f'border-radius:10px;padding:14px 18px;margin-bottom:16px;">'
@@ -1017,7 +1080,7 @@ with tab_cam:
             frame_bgr  = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
             _run_inference_on_frame(frame_bgr)
 
-    # ── MODE 2 : Connected camera (OpenCV) ────────────────────────────────────
+    # ── MODE 3 : Connected camera (OpenCV) ────────────────────────────────────
     else:
         st.markdown(
             f'<div style="background:{T["card"]};border:1px solid {T["border"]};'
@@ -1031,11 +1094,11 @@ with tab_cam:
             unsafe_allow_html=True,
         )
         dev_col, btn_col = st.columns([2, 3])
-        cam_idx  = dev_col.number_input("Device index", min_value=0, max_value=10,
-                                        value=0, step=1,
-                                        help="0 = built-in webcam, 1 = first USB camera, etc.")
-        capture  = btn_col.button("Capture snapshot", type="primary",
-                                  use_container_width=True)
+        cam_idx = dev_col.number_input("Device index", min_value=0, max_value=10,
+                                       value=0, step=1,
+                                       help="0 = built-in webcam, 1 = first USB camera, etc.")
+        capture = btn_col.button("Capture snapshot", type="primary",
+                                 use_container_width=True)
 
         if capture:
             cap = cv2.VideoCapture(int(cam_idx))
