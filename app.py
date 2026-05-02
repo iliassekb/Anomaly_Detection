@@ -329,44 +329,60 @@ def post_process_mask(
 
 def extract_product_mask(frame: np.ndarray) -> np.ndarray:
     h, w = frame.shape[:2]
-    bw = max(12, min(h, w) // 10)
+    bw = max(20, min(h, w) // 8)
 
     lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB).astype(np.float32)
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV).astype(np.float32)
 
-    # ── Background estimate from border band ──────────────────────────────────
+    # ── Background: sample the border band ───────────────────────────────────
     bdr = np.zeros((h, w), dtype=bool)
     bdr[:bw, :] = bdr[-bw:, :] = bdr[:, :bw] = bdr[:, -bw:] = True
 
-    # LAB: perceptual distance from background colour
-    bg_lab   = np.median(lab[bdr], axis=0)
-    dist_lab = np.sqrt(((lab - bg_lab) ** 2).sum(axis=2))
-    dist_lab /= np.percentile(dist_lab, 97) + 1e-6
+    bg      = lab[bdr]
+    bg_mean = np.mean(bg, axis=0)
+    bg_std  = np.std(bg,  axis=0) + 1.0   # avoid /0
 
-    # HSV saturation: products are typically more saturated than neutral backgrounds
-    bg_sat   = float(np.median(hsv[bdr, 1]))
-    dist_sat = np.clip(hsv[:, :, 1] / (bg_sat + 1e-6) - 1.0, 0, None)
-    dist_sat /= np.percentile(dist_sat, 97) + 1e-6
+    # Sigma-normalised distance; down-weight L (shadows) vs a*b* (colour)
+    diff = (lab - bg_mean) / bg_std
+    diff[:, :, 0] *= 0.5   # L  – shadow cast by wrinkles
+    diff[:, :, 1] *= 1.3   # a* – colour difference
+    diff[:, :, 2] *= 1.3   # b* – colour difference
+    dist = np.sqrt((diff ** 2).sum(axis=2))
 
-    # Combine: take the stronger signal at each pixel
-    combined = np.clip(np.maximum(dist_lab, dist_sat) * 255, 0, 255).astype(np.uint8)
-    _, fg = cv2.threshold(combined, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    # Fixed sigma threshold (Otsu over-segments textured backgrounds)
+    thr = 2.5
+    fg  = (dist > thr).astype(np.uint8) * 255
+    fg[bdr] = 0
+    if fg.sum() / 255 / (h * w) < 0.02:   # nothing found → relax
+        fg = (dist > 1.8).astype(np.uint8) * 255
+        fg[bdr] = 0
 
-    fg[bdr] = 0  # border is always background
-
-    # ── Morphological cleanup ─────────────────────────────────────────────────
-    k_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (21, 21))
+    # ── Close gaps, then erode hard to sever thin fabric-to-product bridges ──
+    k_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (25, 25))
     fg = cv2.morphologyEx(fg, cv2.MORPH_CLOSE, k_close)
-    k_open  = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9,  9))
-    fg = cv2.morphologyEx(fg, cv2.MORPH_OPEN,  k_open)
 
-    # Keep only the largest connected region
-    n, labels, stats, _ = cv2.connectedComponentsWithStats(fg, connectivity=8)
+    k_erode = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
+    fg_e    = cv2.erode(fg, k_erode)
+
+    # ── Pick the blob closest to image centre (product is never a corner blob)
+    n, labels, stats, _ = cv2.connectedComponentsWithStats(fg_e, connectivity=8)
     if n > 1:
-        largest = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
-        fg = np.where(labels == largest, np.uint8(255), np.uint8(0))
+        cy_img, cx_img = h / 2.0, w / 2.0
+        best, best_score = 1, -1.0
+        for i in range(1, n):
+            x_, y_, bw_, bh_, area = stats[i]
+            cx_ = x_ + bw_ / 2.0
+            cy_ = y_ + bh_ / 2.0
+            d   = np.sqrt((cx_ - cx_img) ** 2 + (cy_ - cy_img) ** 2)
+            score = area / (1.0 + d)   # large AND central wins
+            if score > best_score:
+                best_score, best = score, i
+        fg_e = np.where(labels == best, np.uint8(255), np.uint8(0))
 
-    # ── Convex hull → always a clean, coherent product outline ───────────────
+    # Dilate back to recover product edges lost during erosion
+    k_dil2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (19, 19))
+    fg = cv2.dilate(fg_e, k_dil2)
+
+    # ── Convex hull → one clean polygon ──────────────────────────────────────
     cnts, _ = cv2.findContours(fg, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if cnts:
         pts  = np.vstack([c.reshape(-1, 2) for c in cnts])
