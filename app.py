@@ -17,6 +17,11 @@ import torch
 from PIL import Image
 from ultralytics import YOLO
 
+try:
+    from streamlit_camera_input_live import camera_input_live as _cam_live
+    _CAM_LIVE = True
+except ImportError:
+    _CAM_LIVE = False
 
 torch.load = functools.partial(torch.load, weights_only=False)
 
@@ -1002,81 +1007,95 @@ with tab_cam:
 
     # ── MODE 1 : Live detection (browser camera) ──────────────────────────────
     if cam_mode == "Live detection (browser)":
-        st.markdown(
-            f'<div style="background:{T["card"]};border:1px solid {T["border"]};'
-            f'border-radius:10px;padding:14px 18px;margin-bottom:16px;">'
-            f'<div style="font-size:13px;font-weight:600;color:{T["t1"]};">'
-            f'Live detection</div>'
-            f'<div style="font-size:11px;color:{T["t2"]};margin-top:4px;">'
-            f'Click <b>Take photo</b> to capture a frame and run YOLO on it. '
-            f'Works with any webcam, virtual camera (iVCam, DroidCam, EpocCam) or phone camera. '
-            f'Click <b>Take another photo</b> to detect the next frame continuously.'
-            f'</div></div>',
-            unsafe_allow_html=True,
-        )
+        if not _CAM_LIVE:
+            st.error("streamlit-camera-input-live is not installed. "
+                     "Add it to requirements.txt and restart.")
+        else:
+            st.markdown(
+                f'<div style="background:{T["card"]};border:1px solid {T["border"]};'
+                f'border-radius:10px;padding:14px 18px;margin-bottom:16px;">'
+                f'<div style="font-size:13px;font-weight:600;color:{T["t1"]};">'
+                f'Real-time detection</div>'
+                f'<div style="font-size:11px;color:{T["t2"]};margin-top:4px;">'
+                f'Press <b>START</b>, allow camera access, and YOLO runs on every frame '
+                f'automatically. Works on laptop, phone (open this URL in your mobile '
+                f'browser), tablet, or any device with a camera.'
+                f'</div></div>',
+                unsafe_allow_html=True,
+            )
 
-        for _k, _v in [("rt_fps", 0.0), ("rt_t_last", 0.0), ("rt_n_det", 0)]:
-            if _k not in st.session_state:
-                st.session_state[_k] = _v
+            for _k, _v in [("rt_running", False), ("rt_fps", 0.0),
+                            ("rt_t_last", 0.0), ("rt_n_det", 0)]:
+                if _k not in st.session_state:
+                    st.session_state[_k] = _v
 
-        col_cam, col_ann = st.columns([1, 1])
+            _btn_label = "⏹  STOP" if st.session_state.rt_running else "▶  START"
+            if st.button(_btn_label, type="primary", key="rt_toggle"):
+                st.session_state.rt_running = not st.session_state.rt_running
+                st.rerun()
 
-        with col_cam:
-            cam_image = st.camera_input("Camera", label_visibility="collapsed")
+            if st.session_state.rt_running:
+                _result_ph = st.empty()
+                _cam_frame  = _cam_live(key="rt_cam", debounce=0,
+                                        label_visibility="collapsed")
 
-        with col_ann:
-            result_ph = st.empty()
-            if cam_image is not None:
-                _now = time.time()
-                if st.session_state.rt_t_last > 0:
-                    _dt = max(_now - st.session_state.rt_t_last, 0.001)
-                    st.session_state.rt_fps = (0.7 * st.session_state.rt_fps
-                                               + 0.3 / _dt)
-                st.session_state.rt_t_last = _now
+                if _cam_frame is not None:
+                    _now = time.time()
+                    if st.session_state.rt_t_last > 0:
+                        _dt = max(_now - st.session_state.rt_t_last, 0.001)
+                        st.session_state.rt_fps = (0.7 * st.session_state.rt_fps
+                                                   + 0.3 / _dt)
+                    st.session_state.rt_t_last = _now
 
-                _fb  = np.frombuffer(cam_image.read(), np.uint8)
-                _frm = cv2.imdecode(_fb, cv2.IMREAD_COLOR)
-                _pm  = extract_product_mask(_frm) if isolate else None
-                _res = model.predict(_frm, imgsz=imgsz, conf=conf_thr, iou=iou_thr,
-                                     device=device, save=False, verbose=False)
-                _ann, _dets = annotate_frame(
-                    _frm.copy(), _res[0], class_names, conf_thr,
-                    product_mask=_pm, mask_overlap_thr=mask_overlap_thr,
-                )
+                    _fb  = np.frombuffer(_cam_frame.read(), np.uint8)
+                    _frm = cv2.imdecode(_fb, cv2.IMREAD_COLOR)
+                    _pm  = extract_product_mask(_frm) if isolate else None
+                    _res = model.predict(_frm, imgsz=imgsz, conf=conf_thr,
+                                         iou=iou_thr, device=device,
+                                         save=False, verbose=False)
+                    _ann, _dets = annotate_frame(
+                        _frm.copy(), _res[0], class_names, conf_thr,
+                        product_mask=_pm, mask_overlap_thr=mask_overlap_thr,
+                    )
 
-                _n   = len(_dets)
-                _ok  = _n == 0
-                _st  = ("PASS" if _ok
-                        else f"FAIL  ({_n} anomal{'y' if _n == 1 else 'ies'})")
-                _sc  = (0, 200, 80) if _ok else (0, 60, 220)
+                    _n  = len(_dets)
+                    _ok = _n == 0
+                    _st = ("PASS" if _ok
+                           else f"FAIL  ({_n} anomal{'y' if _n == 1 else 'ies'})")
+                    _sc = (0, 200, 80) if _ok else (0, 60, 220)
 
-                _ov = _ann.copy()
-                cv2.rectangle(_ov, (8, 8), (310, 162), (10, 10, 10), -1)
-                cv2.addWeighted(_ov, 0.60, _ann, 0.40, 0, _ann)
-                _y = 32
-                for _txt, _col in [
-                    (f"FPS   {st.session_state.rt_fps:5.1f}", (255, 255, 255)),
-                    (f"imgsz {imgsz}",                         (255, 255, 255)),
-                    (f"conf  {conf_thr:.2f}",                  (255, 255, 255)),
-                    (f"dets  {_n}",                            (255, 255, 255)),
-                    (f"device {device.upper()} FP32",          (255, 255, 255)),
-                    (f"► {_st}",                                _sc),
-                ]:
-                    cv2.putText(_ann, _txt, (18, _y),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.52, _col, 1, cv2.LINE_AA)
-                    _y += 22
-                st.session_state.rt_n_det = _n
+                    _ov = _ann.copy()
+                    cv2.rectangle(_ov, (8, 8), (310, 162), (10, 10, 10), -1)
+                    cv2.addWeighted(_ov, 0.60, _ann, 0.40, 0, _ann)
+                    _y = 32
+                    for _txt, _col in [
+                        (f"FPS   {st.session_state.rt_fps:5.1f}", (255, 255, 255)),
+                        (f"imgsz {imgsz}",                         (255, 255, 255)),
+                        (f"conf  {conf_thr:.2f}",                  (255, 255, 255)),
+                        (f"dets  {_n}",                            (255, 255, 255)),
+                        (f"device {device.upper()} FP32",          (255, 255, 255)),
+                        (f"► {_st}",                                _sc),
+                    ]:
+                        cv2.putText(_ann, _txt, (18, _y),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.52,
+                                    _col, 1, cv2.LINE_AA)
+                        _y += 22
+                    st.session_state.rt_n_det = _n
 
-                result_ph.image(cv2.cvtColor(_ann, cv2.COLOR_BGR2RGB),
-                                use_column_width=True)
-            else:
-                result_ph.markdown(
-                    f'<div style="display:flex;align-items:center;justify-content:center;'
-                    f'height:300px;background:{T["bg"]};border-radius:8px;'
-                    f'color:{T["t2"]};font-size:13px;">'
-                    f'Capture a frame to see detection</div>',
-                    unsafe_allow_html=True,
-                )
+                    _result_ph.image(cv2.cvtColor(_ann, cv2.COLOR_BGR2RGB),
+                                     use_column_width=True)
+                    st.rerun()
+                else:
+                    _result_ph.markdown(
+                        f'<div style="display:flex;align-items:center;'
+                        f'justify-content:center;height:300px;'
+                        f'background:{T["bg"]};border-radius:8px;'
+                        f'color:{T["t2"]};font-size:13px;">'
+                        f'Waiting for camera…</div>',
+                        unsafe_allow_html=True,
+                    )
+                    time.sleep(0.05)
+                    st.rerun()
 
     # ── MODE 3 : Connected camera (OpenCV) ────────────────────────────────────
     else:
