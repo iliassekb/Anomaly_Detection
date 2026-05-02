@@ -830,14 +830,14 @@ with tab_img:
                 f'text-transform:uppercase;color:{T["t2"]};margin-bottom:6px;">Original</p>',
                 unsafe_allow_html=True,
             )
-            st.image(bgr_to_pil(frame_raw), use_container_width=True)
+            st.image(bgr_to_pil(frame_raw), use_column_width=True)
         with col_ann:
             st.markdown(
                 f'<p style="font-size:10px;font-weight:700;letter-spacing:1.5px;'
                 f'text-transform:uppercase;color:{T["acc_l"]};margin-bottom:6px;">Annotated</p>',
                 unsafe_allow_html=True,
             )
-            st.image(bgr_to_pil(annotated), use_container_width=True)
+            st.image(bgr_to_pil(annotated), use_column_width=True)
 
         st.markdown(_inf_pill(elapsed * 1000), unsafe_allow_html=True)
         st.markdown(
@@ -924,7 +924,7 @@ with tab_vid:
                 if frame_idx % max(step, 3) == 0:
                     frame_ph.image(bgr_to_pil(last_annotated),
                                    caption=f"Frame {frame_idx+1}",
-                                   use_container_width=True)
+                                   use_column_width=True)
                 frame_idx += 1
 
             cap.release()
@@ -962,14 +962,14 @@ def _run_inference_on_frame(frame_bgr: np.ndarray) -> None:
             f'text-transform:uppercase;color:{T["t2"]};margin-bottom:6px;">Original</p>',
             unsafe_allow_html=True,
         )
-        st.image(bgr_to_pil(frame_raw), use_container_width=True)
+        st.image(bgr_to_pil(frame_raw), use_column_width=True)
     with col_ann:
         st.markdown(
             f'<p style="font-size:10px;font-weight:700;letter-spacing:1.5px;'
             f'text-transform:uppercase;color:{T["acc_l"]};margin-bottom:6px;">Annotated</p>',
             unsafe_allow_html=True,
         )
-        st.image(bgr_to_pil(annotated), use_container_width=True)
+        st.image(bgr_to_pil(annotated), use_column_width=True)
     st.markdown(_inf_pill(elapsed * 1000), unsafe_allow_html=True)
     st.markdown(
         f'<p style="font-size:9px;color:{T["section_c"]};font-weight:700;'
