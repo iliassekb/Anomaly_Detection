@@ -6,7 +6,10 @@ Run:  streamlit run app.py
 import functools
 import io
 import tempfile
+import threading
 import time
+import uuid
+from datetime import datetime
 from pathlib import Path
 
 import cv2
@@ -25,20 +28,27 @@ except Exception as _e:
     _CAM_LIVE = False
     _CAM_LIVE_ERR = str(_e)
 
+try:
+    import av
+    from streamlit_webrtc import webrtc_streamer, VideoProcessorBase
+    _WEBRTC = True
+except Exception:
+    _WEBRTC = False
+    av = None
+
 torch.load = functools.partial(torch.load, weights_only=False)
 
 # ── constants ────────────────────────────────────────────────────────────────
 DEFAULT_WEIGHTS = "mvtec3d_anomaly_type3/weights/best.pt"
 HF_SPACE_REPO   = "imad9/defectvision"
+_HISTORY_MAX    = 100
 
 
 def _is_lfs_pointer(p: Path) -> bool:
-    """Return True if the file is a Git LFS pointer (~134 bytes) not the real binary."""
     return p.exists() and p.stat().st_size < 1_000_000
 
 
 def _ensure_weights(weights_path: str) -> None:
-    """Download weights via HF Hub API if the file is absent or an LFS pointer."""
     p = Path(weights_path)
     if p.exists() and not _is_lfs_pointer(p):
         return
@@ -60,9 +70,22 @@ def _ensure_weights(weights_path: str) -> None:
 
 
 _ensure_weights(DEFAULT_WEIGHTS)
-CONF_DEFAULT    = 0.25
-IOU_DEFAULT     = 0.45
-IMGSZ_DEFAULT   = 800
+CONF_DEFAULT  = 0.25
+IOU_DEFAULT   = 0.45
+IMGSZ_DEFAULT = 800
+
+
+def _find_models() -> dict[str, str]:
+    """Scan standard locations for .pt weight files."""
+    pts: list[Path] = []
+    for pat in ["*.pt", "mvtec3d_anomaly_type3/weights/*.pt", "models/*.pt"]:
+        pts.extend(Path(".").glob(pat))
+    d = {p.name: str(p) for p in sorted(set(pts)) if p.exists()}
+    default_p = Path(DEFAULT_WEIGHTS)
+    if default_p.name not in d and default_p.exists():
+        d[default_p.name] = str(default_p)
+    return d or {default_p.name: str(default_p)}
+
 
 # ── theme palettes ────────────────────────────────────────────────────────────
 THEMES: dict[str, dict] = {
@@ -98,6 +121,11 @@ THEMES: dict[str, dict] = {
         "head_eyebrow": "#1f46a8",
         "head_title":   "#dce8fc",
         "head_border":  "#162035",
+        "hist_sel_bg":  "#0d1e4a",
+        "hist_pass":    "#0d4a22",
+        "hist_fail":    "#4a0d0d",
+        "hist_pass_fg": "#27c96a",
+        "hist_fail_fg": "#e05050",
     },
     "Light": {
         "bg":           "#f4f6fb",
@@ -131,6 +159,11 @@ THEMES: dict[str, dict] = {
         "head_eyebrow": "#1f46a8",
         "head_title":   "#0d1b3e",
         "head_border":  "#dce3ef",
+        "hist_sel_bg":  "#e8f0fd",
+        "hist_pass":    "#edfbf3",
+        "hist_fail":    "#fef2f2",
+        "hist_pass_fg": "#1a6b3a",
+        "hist_fail_fg": "#c0392b",
     },
 }
 
@@ -280,12 +313,131 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── resolve theme before any rendering ───────────────────────────────────────
+# ── session state init ────────────────────────────────────────────────────────
 if "theme" not in st.session_state:
     st.session_state.theme = "Dark"
+if "history" not in st.session_state:
+    st.session_state.history = []
+if "viewing_history_id" not in st.session_state:
+    st.session_state.viewing_history_id = None
 
 T = THEMES[st.session_state.theme]
 st.markdown(make_css(T), unsafe_allow_html=True)
+
+
+# ── history helpers ───────────────────────────────────────────────────────────
+
+def _add_to_history(entry: dict) -> str:
+    entry_id = uuid.uuid4().hex[:8]
+    entry["id"]        = entry_id
+    entry["timestamp"] = time.time()
+    st.session_state.history.insert(0, entry)
+    if len(st.session_state.history) > _HISTORY_MAX:
+        st.session_state.history = st.session_state.history[:_HISTORY_MAX]
+    return entry_id
+
+
+def _remove_from_history(entry_id: str) -> None:
+    st.session_state.history = [
+        e for e in st.session_state.history if e["id"] != entry_id
+    ]
+    if st.session_state.viewing_history_id == entry_id:
+        st.session_state.viewing_history_id = None
+
+
+def _format_ago(ts: float) -> str:
+    s = int(time.time() - ts)
+    if s < 60:   return "just now"
+    m = s // 60
+    if m < 60:   return f"{m}m ago"
+    h = m // 60
+    if h < 24:   return f"{h}h ago"
+    return datetime.fromtimestamp(ts).strftime("%b %d")
+
+
+def _show_history_detail(entry: dict) -> None:
+    """Render the history detail view in the main content area."""
+    if st.button("← Back to detection", key="hist_back"):
+        st.session_state.viewing_history_id = None
+        st.rerun()
+
+    st.markdown(
+        f'<p style="font-size:9px;color:{T["section_c"]};font-weight:700;'
+        f'letter-spacing:2.5px;text-transform:uppercase;margin:4px 0 2px 0;">'
+        f'{entry["type"].upper()} SCAN</p>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f'<h2 style="margin:0 0 4px 0;font-size:20px;">{entry["filename"]}</h2>',
+        unsafe_allow_html=True,
+    )
+    ts_str = datetime.fromtimestamp(entry["timestamp"]).strftime("%Y-%m-%d %H:%M:%S")
+    inf_str = f"  ·  {entry.get('inference_ms', 0):.0f} ms" if entry.get("inference_ms") else ""
+    st.caption(f"{ts_str}{inf_str}")
+
+    st.markdown("<hr/>", unsafe_allow_html=True)
+
+    if entry["is_anomaly"]:
+        classes = ", ".join(entry["defect_classes"]) or "unknown"
+        n = entry["detections_count"]
+        st.markdown(
+            f'<div style="background:{T["hist_fail"]};border:1px solid {T["hist_fail_fg"]}40;'
+            f'border-radius:10px;padding:14px 20px;color:{T["hist_fail_fg"]};font-weight:700;'
+            f'font-size:13px;letter-spacing:1px;margin-bottom:16px;">'
+            f'DEFECT DETECTED &nbsp;·&nbsp; {classes.upper()} &nbsp;({n} instance{"s" if n!=1 else ""})'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            f'<div style="background:{T["pass_bg"]};border:1px solid {T["pass_border"]};'
+            f'border-radius:10px;padding:14px 20px;color:{T["pass_fg"]};font-weight:700;'
+            f'font-size:13px;letter-spacing:1.5px;margin-bottom:16px;">'
+            f'PASS &nbsp;·&nbsp; No anomalies detected</div>',
+            unsafe_allow_html=True,
+        )
+
+    # ── Image / Camera result ─────────────────────────────────────────────────
+    if entry.get("orig_img") is not None and entry.get("ann_img") is not None:
+        col_orig, col_ann = st.columns(2)
+        with col_orig:
+            st.markdown(
+                f'<p style="font-size:10px;font-weight:700;letter-spacing:1.5px;'
+                f'text-transform:uppercase;color:{T["t2"]};margin-bottom:6px;">Original</p>',
+                unsafe_allow_html=True,
+            )
+            st.image(entry["orig_img"], use_container_width=True)
+        with col_ann:
+            st.markdown(
+                f'<p style="font-size:10px;font-weight:700;letter-spacing:1.5px;'
+                f'text-transform:uppercase;color:{T["acc_l"]};margin-bottom:6px;">Annotated</p>',
+                unsafe_allow_html=True,
+            )
+            st.image(entry["ann_img"], use_container_width=True)
+    elif entry["type"] in ("image", "camera"):
+        st.info("Images are only stored for scans done in the current session.")
+
+    # ── Video stats ───────────────────────────────────────────────────────────
+    if entry.get("video_stats"):
+        vs = entry["video_stats"]
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Frames scanned", vs["total_frames"])
+        c2.metric("With defects",   vs["anomaly_frames"])
+        c3.metric("Defect rate",    f"{vs['anomaly_rate']:.1f}%")
+        c4.metric("Total findings", vs["total_detections"])
+
+        if vs.get("detections_by_class"):
+            st.markdown(
+                f'<p style="font-size:9px;color:{T["section_c"]};font-weight:700;'
+                f'letter-spacing:2.5px;text-transform:uppercase;margin:18px 0 10px 0;">'
+                f'Findings by defect type</p>',
+                unsafe_allow_html=True,
+            )
+            tot = max(vs["total_detections"], 1)
+            for cls, n in vs["detections_by_class"].items():
+                pct = n / tot
+                st.progress(pct, text=f"{cls.capitalize()}: {n} ({pct*100:.0f}%)")
+
 
 # ── backend helpers ───────────────────────────────────────────────────────────
 
@@ -341,37 +493,32 @@ def extract_product_mask(frame: np.ndarray) -> np.ndarray:
 
     lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB).astype(np.float32)
 
-    # ── Background: sample the border band ───────────────────────────────────
     bdr = np.zeros((h, w), dtype=bool)
     bdr[:bw, :] = bdr[-bw:, :] = bdr[:, :bw] = bdr[:, -bw:] = True
 
     bg      = lab[bdr]
     bg_mean = np.mean(bg, axis=0)
-    bg_std  = np.std(bg,  axis=0) + 1.0   # avoid /0
+    bg_std  = np.std(bg,  axis=0) + 1.0
 
-    # Sigma-normalised distance; down-weight L (shadows) vs a*b* (colour)
     diff = (lab - bg_mean) / bg_std
-    diff[:, :, 0] *= 0.5   # L  – shadow cast by wrinkles
-    diff[:, :, 1] *= 1.3   # a* – colour difference
-    diff[:, :, 2] *= 1.3   # b* – colour difference
+    diff[:, :, 0] *= 0.5
+    diff[:, :, 1] *= 1.3
+    diff[:, :, 2] *= 1.3
     dist = np.sqrt((diff ** 2).sum(axis=2))
 
-    # Fixed sigma threshold (Otsu over-segments textured backgrounds)
     thr = 2.5
     fg  = (dist > thr).astype(np.uint8) * 255
     fg[bdr] = 0
-    if fg.sum() / 255 / (h * w) < 0.02:   # nothing found → relax
+    if fg.sum() / 255 / (h * w) < 0.02:
         fg = (dist > 1.8).astype(np.uint8) * 255
         fg[bdr] = 0
 
-    # ── Close gaps, then erode hard to sever thin fabric-to-product bridges ──
     k_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (25, 25))
     fg = cv2.morphologyEx(fg, cv2.MORPH_CLOSE, k_close)
 
     k_erode = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
     fg_e    = cv2.erode(fg, k_erode)
 
-    # ── Pick the blob closest to image centre (product is never a corner blob)
     n, labels, stats, _ = cv2.connectedComponentsWithStats(fg_e, connectivity=8)
     if n > 1:
         cy_img, cx_img = h / 2.0, w / 2.0
@@ -381,16 +528,14 @@ def extract_product_mask(frame: np.ndarray) -> np.ndarray:
             cx_ = x_ + bw_ / 2.0
             cy_ = y_ + bh_ / 2.0
             d   = np.sqrt((cx_ - cx_img) ** 2 + (cy_ - cy_img) ** 2)
-            score = area / (1.0 + d)   # large AND central wins
+            score = area / (1.0 + d)
             if score > best_score:
                 best_score, best = score, i
         fg_e = np.where(labels == best, np.uint8(255), np.uint8(0))
 
-    # Dilate back to recover product edges lost during erosion
     k_dil2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (19, 19))
     fg = cv2.dilate(fg_e, k_dil2)
 
-    # ── Convex hull → one clean polygon ──────────────────────────────────────
     cnts, _ = cv2.findContours(fg, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if cnts:
         pts  = np.vstack([c.reshape(-1, 2) for c in cnts])
@@ -693,8 +838,10 @@ with st.sidebar:
         f'letter-spacing:2.5px;text-transform:uppercase;margin:18px 0 6px 0;">Model</p>',
         unsafe_allow_html=True,
     )
-    weights_input = st.text_input("Weights path", value=DEFAULT_WEIGHTS,
-                                  label_visibility="collapsed")
+    model_options = _find_models()
+    chosen_name = st.selectbox("Model", list(model_options.keys()),
+                               label_visibility="collapsed")
+    weights_input = model_options[chosen_name]
     weights_ok = Path(weights_input).exists()
     if not weights_ok:
         st.error("Weights file not found")
@@ -746,6 +893,60 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
 
+    # ── History ───────────────────────────────────────────────────────────────
+    history = st.session_state.history
+    n_hist  = len(history)
+    n_anom  = sum(1 for e in history if e["is_anomaly"])
+
+    st.markdown(
+        f'<p style="font-size:9px;color:{T["section_c"]};font-weight:700;'
+        f'letter-spacing:2.5px;text-transform:uppercase;margin:22px 0 6px 0;">'
+        f'History &nbsp;'
+        f'<span style="font-size:10px;background:{T["card"]};'
+        f'border:1px solid {T["border"]};border-radius:8px;padding:1px 7px;">'
+        f'{n_hist}</span></p>',
+        unsafe_allow_html=True,
+    )
+
+    if n_hist == 0:
+        st.markdown(
+            f'<p style="font-size:11px;color:{T["t2"]};padding:4px 0;">No scans yet</p>',
+            unsafe_allow_html=True,
+        )
+    else:
+        col_stats, col_clr = st.columns([3, 1])
+        with col_stats:
+            st.markdown(
+                f'<p style="font-size:10px;color:{T["t2"]};margin:0 0 6px 0;">'
+                f'{n_anom} anomal{"y" if n_anom==1 else "ies"}</p>',
+                unsafe_allow_html=True,
+            )
+        with col_clr:
+            if st.button("Clear", key="hist_clear_btn", use_container_width=True):
+                st.session_state.history = []
+                st.session_state.viewing_history_id = None
+                st.rerun()
+
+        for entry in history[:30]:
+            is_sel  = st.session_state.viewing_history_id == entry["id"]
+            icon    = "🔴" if entry["is_anomaly"] else "🟢"
+            fname   = entry["filename"][:16] + ("…" if len(entry["filename"]) > 16 else "")
+            ago_str = _format_ago(entry["timestamp"])
+            label   = f"{icon} {fname}  ·  {ago_str}"
+
+            btn_col, rm_col = st.columns([5, 1])
+            with btn_col:
+                btn_type = "primary" if is_sel else "secondary"
+                if st.button(label, key=f"hv_{entry['id']}", use_container_width=True,
+                             type=btn_type, help=entry["filename"]):
+                    st.session_state.viewing_history_id = entry["id"]
+                    st.rerun()
+            with rm_col:
+                if st.button("✕", key=f"hr_{entry['id']}", help="Remove entry"):
+                    _remove_from_history(entry["id"])
+                    st.rerun()
+
+
 # ── model load ────────────────────────────────────────────────────────────────
 
 if not weights_ok:
@@ -756,6 +957,20 @@ model       = load_model(weights_input)
 class_names = dict(model.names)
 n_classes   = max(class_names.keys()) + 1
 palette     = build_palette(n_classes)
+
+
+# ── history detail OR main detection UI ──────────────────────────────────────
+
+if st.session_state.viewing_history_id:
+    entry_map = {e["id"]: e for e in st.session_state.history}
+    entry = entry_map.get(st.session_state.viewing_history_id)
+    if entry:
+        _show_history_detail(entry)
+    else:
+        st.session_state.viewing_history_id = None
+        st.rerun()
+    st.stop()
+
 
 # ── header ────────────────────────────────────────────────────────────────────
 
@@ -789,12 +1004,11 @@ st.markdown(f"""
 
 # ── tabs ──────────────────────────────────────────────────────────────────────
 
-tab_img, tab_vid, tab_cam = st.tabs(["Image", "Video", "Webcam snapshot"])
+tab_img, tab_vid, tab_cam = st.tabs(["Image", "Video", "Camera"])
 
 # ── IMAGE tab ─────────────────────────────────────────────────────────────────
 
 with tab_img:
-    # ── Upload zone ──────────────────────────────────────────────────────────
     st.markdown(
         f'<p style="font-size:9px;color:{T["section_c"]};font-weight:700;'
         f'letter-spacing:2.5px;text-transform:uppercase;margin:8px 0 10px 0;">'
@@ -843,14 +1057,14 @@ with tab_img:
                 f'text-transform:uppercase;color:{T["t2"]};margin-bottom:6px;">Original</p>',
                 unsafe_allow_html=True,
             )
-            st.image(bgr_to_pil(frame_raw), use_column_width=True)
+            st.image(bgr_to_pil(frame_raw), use_container_width=True)
         with col_ann:
             st.markdown(
                 f'<p style="font-size:10px;font-weight:700;letter-spacing:1.5px;'
                 f'text-transform:uppercase;color:{T["acc_l"]};margin-bottom:6px;">Annotated</p>',
                 unsafe_allow_html=True,
             )
-            st.image(bgr_to_pil(annotated), use_column_width=True)
+            st.image(bgr_to_pil(annotated), use_container_width=True)
 
         st.markdown(_inf_pill(elapsed * 1000), unsafe_allow_html=True)
         st.markdown(
@@ -866,6 +1080,18 @@ with tab_img:
         st.download_button("Download annotated image", buf.getvalue(),
                            file_name=f"annotated_{uploaded_img.name}",
                            mime="image/png", key=f"dl_{img_idx}")
+
+        _add_to_history({
+            "type":            "image",
+            "filename":        uploaded_img.name,
+            "is_anomaly":      len(detections) > 0,
+            "detections_count": len(detections),
+            "defect_classes":  list(dict.fromkeys(d["class"] for d in detections)),
+            "inference_ms":    elapsed * 1000,
+            "orig_img":        bgr_to_pil(frame_raw),
+            "ann_img":         bgr_to_pil(annotated),
+        })
+
 
 # ── VIDEO tab ─────────────────────────────────────────────────────────────────
 
@@ -912,8 +1138,10 @@ with tab_vid:
 
             frame_ph  = st.empty()
             prog_bar  = st.progress(0, text="Processing...")
-            all_dets2: list[dict] = []
-            frame_idx = 0
+            all_dets2: list[dict]    = []
+            frame_idx    = 0
+            anomaly_frames = 0
+            dets_by_class: dict[str, int] = {}
 
             while True:
                 ok, frame = cap.read()
@@ -926,6 +1154,10 @@ with tab_vid:
                     annotated, dets = annotate_frame(
                         frame.copy(), results[0], class_names, conf_thr
                     )
+                    if dets:
+                        anomaly_frames += 1
+                        for d in dets:
+                            dets_by_class[d["class"]] = dets_by_class.get(d["class"], 0) + 1
                     all_dets2.extend(dets)
                     last_annotated = annotated
                 else:
@@ -937,13 +1169,16 @@ with tab_vid:
                 if frame_idx % max(step, 3) == 0:
                     frame_ph.image(bgr_to_pil(last_annotated),
                                    caption=f"Frame {frame_idx+1}",
-                                   use_column_width=True)
+                                   use_container_width=True)
                 frame_idx += 1
 
             cap.release()
             writer.release()
             prog_bar.empty()
             frame_ph.empty()
+
+            processed = max(frame_idx // step, 1)
+            anom_rate = round(anomaly_frames / processed * 100, 1)
 
             st.success(f"Done — {frame_idx} frames processed.")
             st.markdown("#### Overall detections")
@@ -953,9 +1188,28 @@ with tab_vid:
                 st.download_button("Download annotated video", f.read(),
                                    file_name="annotated_output.mp4", mime="video/mp4")
 
-# ── WEBCAM tab ────────────────────────────────────────────────────────────────
+            _add_to_history({
+                "type":             "video",
+                "filename":         uploaded_vid.name,
+                "is_anomaly":       len(all_dets2) > 0,
+                "detections_count": len(all_dets2),
+                "defect_classes":   list(dets_by_class.keys()),
+                "inference_ms":     None,
+                "orig_img":         None,
+                "ann_img":          None,
+                "video_stats": {
+                    "total_frames":       processed,
+                    "anomaly_frames":     anomaly_frames,
+                    "anomaly_rate":       anom_rate,
+                    "total_detections":   len(all_dets2),
+                    "detections_by_class": dets_by_class,
+                },
+            })
 
-def _run_inference_on_frame(frame_bgr: np.ndarray) -> None:
+
+# ── CAMERA tab ────────────────────────────────────────────────────────────────
+
+def _run_cam_inference(frame_bgr: np.ndarray, source_name: str = "Camera") -> None:
     frame_raw = frame_bgr.copy()
     with st.spinner("Running inference..."):
         t0        = time.time()
@@ -968,6 +1222,7 @@ def _run_inference_on_frame(frame_bgr: np.ndarray) -> None:
         frame_bgr.copy(), results[0], class_names, conf_thr,
         product_mask=prod_mask, mask_overlap_thr=mask_overlap_thr,
     )
+
     col_orig, col_ann = st.columns(2)
     with col_orig:
         st.markdown(
@@ -975,188 +1230,120 @@ def _run_inference_on_frame(frame_bgr: np.ndarray) -> None:
             f'text-transform:uppercase;color:{T["t2"]};margin-bottom:6px;">Original</p>',
             unsafe_allow_html=True,
         )
-        st.image(bgr_to_pil(frame_raw), use_column_width=True)
+        st.image(bgr_to_pil(frame_raw), use_container_width=True)
     with col_ann:
         st.markdown(
             f'<p style="font-size:10px;font-weight:700;letter-spacing:1.5px;'
             f'text-transform:uppercase;color:{T["acc_l"]};margin-bottom:6px;">Annotated</p>',
             unsafe_allow_html=True,
         )
-        st.image(bgr_to_pil(annotated), use_column_width=True)
+        st.image(bgr_to_pil(annotated), use_container_width=True)
+
     st.markdown(_inf_pill(elapsed * 1000), unsafe_allow_html=True)
-    st.markdown(
-        f'<p style="font-size:9px;color:{T["section_c"]};font-weight:700;'
-        f'letter-spacing:2.5px;text-transform:uppercase;margin:18px 0 10px 0;">'
-        f'Detection Results</p>',
-        unsafe_allow_html=True,
-    )
     detection_stats(detections)
+
+    _add_to_history({
+        "type":             "camera",
+        "filename":         source_name,
+        "is_anomaly":       len(detections) > 0,
+        "detections_count": len(detections),
+        "defect_classes":   list(dict.fromkeys(d["class"] for d in detections)),
+        "inference_ms":     elapsed * 1000,
+        "orig_img":         bgr_to_pil(frame_raw),
+        "ann_img":          bgr_to_pil(annotated),
+    })
 
 
 with tab_cam:
-    # ── Mode selector ─────────────────────────────────────────────────────────
     st.markdown(
         f'<p style="font-size:9px;color:{T["section_c"]};font-weight:700;'
         f'letter-spacing:2.5px;text-transform:uppercase;margin:8px 0 10px 0;">'
         f'Camera Source</p>',
         unsafe_allow_html=True,
     )
+
+    cam_modes = ["Browser camera (snapshot)", "Real-time (continuous)"]
+    if not _CAM_LIVE:
+        cam_modes = ["Browser camera (snapshot)", "Connected USB / IP camera"]
+
     cam_mode = st.radio(
-        "Camera source",
-        ["Live detection (browser)", "Connected camera (USB / external)"],
+        "Camera mode",
+        cam_modes,
         label_visibility="collapsed",
     )
 
-    # ── MODE 1 : Live detection (browser camera) ──────────────────────────────
-    if cam_mode == "Live detection (browser)":
-        import streamlit.components.v1 as _cmpv1
-
+    # ── MODE 1: Browser snapshot via st.camera_input ─────────────────────────
+    if cam_mode == "Browser camera (snapshot)":
         st.markdown(
             f'<div style="background:{T["card"]};border:1px solid {T["border"]};'
-            f'border-radius:10px;padding:14px 18px;margin-bottom:12px;">'
-            f'<div style="font-size:13px;font-weight:600;color:{T["t1"]};">'
-            f'Real-time detection</div>'
+            f'border-radius:10px;padding:14px 18px;margin-bottom:16px;">'
+            f'<div style="font-size:13px;font-weight:600;color:{T["t1"]};">Browser camera</div>'
             f'<div style="font-size:11px;color:{T["t2"]};margin-top:4px;">'
-            f'Press <b>START</b> and allow camera access — YOLO runs on every '
-            f'frame automatically. Works on PC, phone, or tablet.'
-            f'</div></div>',
+            f'Take a snapshot with your device camera. Works on phones, tablets and PCs.</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+        img_snap = st.camera_input("Take a photo", key="cam_snap", label_visibility="collapsed")
+        if img_snap:
+            file_bytes = np.frombuffer(img_snap.getvalue(), np.uint8)
+            frame_bgr  = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+            if frame_bgr is not None:
+                _run_cam_inference(frame_bgr, "Camera snapshot")
+
+    # ── MODE 2a: Real-time via streamlit_camera_input_live ────────────────────
+    elif cam_mode == "Real-time (continuous)" and _CAM_LIVE:
+        st.markdown(
+            f'<div style="background:{T["card"]};border:1px solid {T["border"]};'
+            f'border-radius:10px;padding:14px 18px;margin-bottom:16px;">'
+            f'<div style="font-size:13px;font-weight:600;color:{T["t1"]};">Real-time detection</div>'
+            f'<div style="font-size:11px;color:{T["t2"]};margin-top:4px;">'
+            f'Continuous frames from your browser camera — YOLO runs on each frame. '
+            f'Allow camera access when prompted.</div></div>',
             unsafe_allow_html=True,
         )
 
-        for _k, _v in [("rt_running", False), ("rt_fps", 0.0),
-                        ("rt_t_last", 0.0), ("rt_n_det", 0),
-                        ("rt_last_frame", None), ("rt_frame_n", 0)]:
-            if _k not in st.session_state:
-                st.session_state[_k] = _v
+        rt_col1, rt_col2 = st.columns(2)
+        with rt_col1:
+            rt_imgsz = st.selectbox("RT inference size", [320, 480, 640], index=0,
+                                    key="rt_imgsz", help="320 px is fastest")
+        with rt_col2:
+            debounce_ms = st.slider("Frame interval (ms)", 100, 1000, 200, 50,
+                                    key="rt_debounce")
 
-        _btn_label = "⏹  STOP" if st.session_state.rt_running else "▶  START"
-        if st.button(_btn_label, type="primary", key="rt_toggle"):
-            st.session_state.rt_running = not st.session_state.rt_running
-            if not st.session_state.rt_running:
-                st.session_state.rt_last_frame = None
-                st.session_state.rt_frame_n = 0
-            st.rerun()
+        result_ph  = st.empty()
+        cam_ph     = st.empty()
 
-        if st.session_state.rt_running:
-            # Show last annotated result (no blank flash between reruns)
-            if st.session_state.rt_last_frame is not None:
-                st.image(st.session_state.rt_last_frame, use_column_width=True)
-            else:
-                st.markdown(
-                    f'<div style="display:flex;align-items:center;'
-                    f'justify-content:center;height:280px;'
-                    f'background:{T["bg"]};border-radius:8px;'
-                    f'color:{T["t2"]};font-size:13px;">'
-                    f'Waiting for camera…</div>',
-                    unsafe_allow_html=True,
+        with cam_ph:
+            img_live = _cam_live(key="cam_live", debounce=debounce_ms)
+
+        if img_live is not None:
+            file_bytes = np.frombuffer(img_live.getvalue(), np.uint8)
+            frame_bgr  = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+            if frame_bgr is not None:
+                t0        = time.time()
+                prod_mask = extract_product_mask(frame_bgr) if isolate else None
+                results   = model.predict(frame_bgr, imgsz=rt_imgsz, conf=conf_thr,
+                                          iou=iou_thr, device=device,
+                                          save=False, verbose=False)
+                elapsed   = time.time() - t0
+                annotated, detections = annotate_frame(
+                    frame_bgr.copy(), results[0], class_names, conf_thr,
+                    product_mask=prod_mask, mask_overlap_thr=mask_overlap_thr,
                 )
+                with result_ph.container():
+                    st.image(bgr_to_pil(annotated), caption=f"Inference {elapsed*1000:.0f} ms",
+                             use_container_width=True)
+                    detection_stats(detections)
 
-            # ── Frame source: prefer streamlit-camera-input-live, fall back
-            #    to st.camera_input() + JavaScript auto-click ─────────────────
-            if _CAM_LIVE:
-                _cam_frame = _cam_live(key="rt_cam", debounce=0,
-                                       label_visibility="collapsed")
-            else:
-                # JavaScript MutationObserver: watches the parent DOM and clicks
-                # the Streamlit camera "Take photo" button as soon as it appears.
-                # srcdoc iframes share the parent's origin so window.parent.document
-                # is accessible without cross-origin restrictions.
-                _cmpv1.html("""
-<script>
-(function(){
-  if(window.parent._dvObs) return;
-  var lastClick=0;
-  function clickCam(){
-    var now=Date.now();
-    if(now-lastClick<400) return;
-    try{
-      var btns=window.parent.document.querySelectorAll('button');
-      for(var i=0;i<btns.length;i++){
-        var t=(btns[i].textContent||'').trim();
-        if(/take|photo|snap|capture/i.test(t)){
-          btns[i].click(); lastClick=now; break;
-        }
-      }
-    }catch(e){}
-  }
-  window.parent._dvObs=new MutationObserver(function(){
-    clearTimeout(window.parent._dvT);
-    window.parent._dvT=setTimeout(clickCam,80);
-  });
-  window.parent._dvObs.observe(
-    window.parent.document.body,{childList:true,subtree:true});
-  setInterval(clickCam,900);
-  setTimeout(clickCam,300);
-})();
-</script>
-""", height=0)
-                _cam_key   = f"rt_cam_{st.session_state.rt_frame_n}"
-                _cam_frame = st.camera_input("", label_visibility="collapsed",
-                                              key=_cam_key)
-
-            if _cam_frame is not None:
-                _now = time.time()
-                if st.session_state.rt_t_last > 0:
-                    _dt = max(_now - st.session_state.rt_t_last, 0.001)
-                    st.session_state.rt_fps = (0.7 * st.session_state.rt_fps
-                                               + 0.3 / _dt)
-                st.session_state.rt_t_last = _now
-
-                _fb  = np.frombuffer(_cam_frame.read(), np.uint8)
-                _frm = cv2.imdecode(_fb, cv2.IMREAD_COLOR)
-                _pm  = extract_product_mask(_frm) if isolate else None
-                _res = model.predict(_frm, imgsz=imgsz, conf=conf_thr,
-                                     iou=iou_thr, device=device,
-                                     save=False, verbose=False)
-                _ann, _dets = annotate_frame(
-                    _frm.copy(), _res[0], class_names, conf_thr,
-                    product_mask=_pm, mask_overlap_thr=mask_overlap_thr,
-                )
-
-                _n  = len(_dets)
-                _ok = _n == 0
-                _st = ("PASS" if _ok
-                       else f"FAIL  ({_n} anomal{'y' if _n == 1 else 'ies'})")
-                _sc = (0, 200, 80) if _ok else (0, 60, 220)
-
-                _ov = _ann.copy()
-                cv2.rectangle(_ov, (8, 8), (310, 162), (10, 10, 10), -1)
-                cv2.addWeighted(_ov, 0.60, _ann, 0.40, 0, _ann)
-                _y = 32
-                for _txt, _col in [
-                    (f"FPS   {st.session_state.rt_fps:5.1f}", (255, 255, 255)),
-                    (f"imgsz {imgsz}",                         (255, 255, 255)),
-                    (f"conf  {conf_thr:.2f}",                  (255, 255, 255)),
-                    (f"dets  {_n}",                            (255, 255, 255)),
-                    (f"device {device.upper()} FP32",          (255, 255, 255)),
-                    (f"► {_st}",                                _sc),
-                ]:
-                    cv2.putText(_ann, _txt, (18, _y),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.52,
-                                _col, 1, cv2.LINE_AA)
-                    _y += 22
-
-                st.session_state.rt_n_det    = _n
-                st.session_state.rt_last_frame = cv2.cvtColor(
-                    _ann, cv2.COLOR_BGR2RGB)
-                if not _CAM_LIVE:
-                    st.session_state.rt_frame_n += 1
-                st.rerun()
-            else:
-                time.sleep(0.05)
-                st.rerun()
-
-    # ── MODE 3 : Connected camera (OpenCV) ────────────────────────────────────
+    # ── MODE 2b: Connected USB / IP camera (local only) ───────────────────────
     else:
         st.markdown(
             f'<div style="background:{T["card"]};border:1px solid {T["border"]};'
             f'border-radius:10px;padding:14px 18px;margin-bottom:16px;">'
             f'<div style="font-size:13px;font-weight:600;color:{T["t1"]};">Connected camera</div>'
             f'<div style="font-size:11px;color:{T["t2"]};margin-top:4px;">'
-            f'Captures directly from a camera connected to this machine via USB or driver '
-            f'(e.g. DroidCam, EpocCam, virtual camera). '
-            f'Device 0 = built-in, 1 = first external, 2 = second external, etc.'
-            f'</div></div>',
+            f'Captures a single frame from a local USB or virtual camera. '
+            f'Device 0 = built-in, 1 = first external. <b>Local use only.</b></div></div>',
             unsafe_allow_html=True,
         )
         dev_col, btn_col = st.columns([2, 3])
@@ -1169,13 +1356,12 @@ with tab_cam:
         if capture:
             cap = cv2.VideoCapture(int(cam_idx))
             if not cap.isOpened():
-                st.error(f"Could not open camera device {int(cam_idx)}. "
-                         f"Check the index or make sure the camera is connected.")
+                st.error(f"Could not open camera device {int(cam_idx)}.")
             else:
                 cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
                 ok, frame = cap.read()
                 cap.release()
                 if not ok or frame is None:
-                    st.error("Camera opened but failed to capture a frame. Try again.")
+                    st.error("Camera opened but failed to capture a frame.")
                 else:
-                    _run_inference_on_frame(frame)
+                    _run_cam_inference(frame, f"USB camera [{int(cam_idx)}]")
