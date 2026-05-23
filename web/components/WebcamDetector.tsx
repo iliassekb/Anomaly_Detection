@@ -162,137 +162,116 @@ export default function WebcamDetector({ config, onDetection }: Props) {
     <div className="space-y-4">
       <canvas ref={captureRef} className="hidden" />
 
-      {/* Camera panels */}
-      <div className={`grid gap-3 ${isStreaming ? "grid-cols-2" : "grid-cols-1"}`}>
+      {/* Single camera panel */}
+      <div
+        className="relative overflow-hidden"
+        style={{
+          borderRadius: "var(--radius-md)",
+          border: `1px solid ${isStreaming && isAnomaly ? "var(--danger-border)" : "var(--border)"}`,
+          background: "var(--surface-alt)",
+          minHeight: 260,
+          aspectRatio: "4/3",
+          transition: "border-color 0.2s",
+        }}
+      >
+        {/* Raw video feed (always rendered while streaming) */}
+        <video
+          ref={videoRef} playsInline muted
+          className="w-full h-full object-cover"
+          style={{ display: isStreaming ? "block" : "none" }}
+        />
 
-        {/* Live feed */}
-        <div
-          className="relative overflow-hidden"
-          style={{
-            borderRadius: "var(--radius-md)",
-            border: "1px solid var(--border)",
-            background: "var(--surface-alt)",
-            minHeight: 220,
-            aspectRatio: "4/3",
-          }}
-        >
-          <video
-            ref={videoRef} playsInline muted
-            className="w-full h-full object-cover"
-            style={{ display: isStreaming ? "block" : "none" }}
+        {/* Annotated frame overlaid on top of video */}
+        {isStreaming && annotatedSrc && (
+          <img
+            src={annotatedSrc}
+            alt="detection"
+            className="absolute inset-0 w-full h-full object-cover"
           />
-          {!isStreaming && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-              <div
-                className="w-12 h-12 rounded flex items-center justify-center"
-                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-              >
-                <Camera size={22} style={{ color: "var(--text-muted)" }} />
-              </div>
-              <p style={{ fontSize: 13, color: "var(--text-muted)" }}>Press Start to begin</p>
+        )}
+
+        {/* Idle placeholder */}
+        {!isStreaming && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+            <div
+              className="w-12 h-12 rounded flex items-center justify-center"
+              style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+            >
+              <Camera size={22} style={{ color: "var(--text-muted)" }} />
             </div>
-          )}
-          {isStreaming && (
-            <>
-              <div className="absolute bottom-2 left-2">
-                <span
-                  className="flex items-center gap-1.5"
-                  style={{
-                    fontSize: 11, fontWeight: 700, color: "#fff",
-                    background: "rgba(0,0,0,0.55)", padding: "3px 8px",
-                    borderRadius: "var(--radius-sm)", letterSpacing: "0.5px",
-                  }}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                  LIVE
-                </span>
-              </div>
-              <div className="absolute top-2 left-2">
-                <span
-                  style={{
-                    fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.75)",
-                    background: "rgba(0,0,0,0.45)", padding: "2px 7px",
-                    borderRadius: "var(--radius-sm)", letterSpacing: "0.5px", textTransform: "uppercase",
-                  }}
-                >
-                  Camera
-                </span>
-              </div>
-            </>
-          )}
-        </div>
+            <p style={{ fontSize: 13, color: "var(--text-muted)" }}>Press Start to begin</p>
+          </div>
+        )}
 
-        {/* Annotated result */}
+        {/* LIVE badge */}
         {isStreaming && (
-          <div
-            className="relative overflow-hidden"
-            style={{
-              borderRadius: "var(--radius-md)",
-              border: `1px solid ${isAnomaly ? "var(--danger-border)" : "var(--border)"}`,
-              background: "var(--surface-alt)",
-              minHeight: 220,
-              aspectRatio: "4/3",
-              transition: "border-color 0.2s",
-            }}
-          >
-            {annotatedSrc ? (
-              <img src={annotatedSrc} alt="detection" className="w-full h-full object-cover" />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Zap size={26} style={{ color: "var(--accent)", opacity: 0.5 }} />
-              </div>
-            )}
+          <div className="absolute bottom-2 left-2">
+            <span
+              className="flex items-center gap-1.5"
+              style={{
+                fontSize: 11, fontWeight: 700, color: "#fff",
+                background: "rgba(0,0,0,0.55)", padding: "3px 8px",
+                borderRadius: "var(--radius-sm)", letterSpacing: "0.5px",
+              }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+              LIVE
+            </span>
+          </div>
+        )}
 
-            {/* Status badge */}
-            <div className="absolute top-2 left-2">
+        {/* Status badge (top-left) */}
+        {isStreaming && (
+          <div className="absolute top-2 left-2">
+            <span
+              className="flex items-center gap-1.5"
+              style={{
+                fontSize: 11, fontWeight: 700, color: "#fff",
+                background: isAnomaly ? "rgba(220,38,38,0.82)" : "rgba(22,163,74,0.82)",
+                padding: "3px 8px", borderRadius: "var(--radius-sm)",
+              }}
+            >
+              {isAnomaly ? <AlertTriangle size={10} /> : <CheckCircle size={10} />}
+              {isAnomaly ? "Defect" : "OK"}
+            </span>
+          </div>
+        )}
+
+        {/* Perf metrics (top-right) */}
+        {isStreaming && (
+          <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+            {[`${inferMs} ms`, `${fps} fps`].map((label) => (
               <span
-                className="flex items-center gap-1.5"
+                key={label}
                 style={{
-                  fontSize: 11, fontWeight: 700, color: "#fff",
-                  background: isAnomaly ? "rgba(220,38,38,0.82)" : "rgba(22,163,74,0.82)",
-                  padding: "3px 8px", borderRadius: "var(--radius-sm)",
+                  fontSize: 10, fontFamily: "monospace", fontWeight: 600,
+                  color: "rgba(255,255,255,0.85)",
+                  background: "rgba(0,0,0,0.5)", padding: "2px 7px",
+                  borderRadius: "var(--radius-sm)",
                 }}
               >
-                {isAnomaly ? <AlertTriangle size={10} /> : <CheckCircle size={10} />}
-                {isAnomaly ? "Defect" : "OK"}
+                {label}
               </span>
-            </div>
+            ))}
+          </div>
+        )}
 
-            {/* Perf metrics */}
-            <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
-              {[`${inferMs} ms`, `${fps} fps`].map((label) => (
-                <span
-                  key={label}
-                  style={{
-                    fontSize: 10, fontFamily: "monospace", fontWeight: 600,
-                    color: "rgba(255,255,255,0.85)",
-                    background: "rgba(0,0,0,0.5)", padding: "2px 7px",
-                    borderRadius: "var(--radius-sm)",
-                  }}
-                >
-                  {label}
-                </span>
-              ))}
-            </div>
-
-            {/* Detection labels */}
-            {Object.entries(grouped).length > 0 && (
-              <div className="absolute bottom-2 right-2 flex flex-col gap-1 items-end">
-                {Object.entries(grouped).map(([cls, info]) => (
-                  <span
-                    key={cls}
-                    style={{
-                      fontSize: 11, fontWeight: 700, color: "#fff",
-                      background: "rgba(220,38,38,0.82)", padding: "3px 9px",
-                      borderRadius: "var(--radius-sm)",
-                    }}
-                  >
-                    {cls} {Math.round(info.maxConf * 100)}%
-                    {info.count > 1 && <span style={{ opacity: 0.75, marginLeft: 4 }}>×{info.count}</span>}
-                  </span>
-                ))}
-              </div>
-            )}
+        {/* Detection labels (bottom-right) */}
+        {isStreaming && Object.entries(grouped).length > 0 && (
+          <div className="absolute bottom-2 right-2 flex flex-col gap-1 items-end">
+            {Object.entries(grouped).map(([cls, info]) => (
+              <span
+                key={cls}
+                style={{
+                  fontSize: 11, fontWeight: 700, color: "#fff",
+                  background: "rgba(220,38,38,0.82)", padding: "3px 9px",
+                  borderRadius: "var(--radius-sm)",
+                }}
+              >
+                {cls} {Math.round(info.maxConf * 100)}%
+                {info.count > 1 && <span style={{ opacity: 0.75, marginLeft: 4 }}>×{info.count}</span>}
+              </span>
+            ))}
           </div>
         )}
       </div>
