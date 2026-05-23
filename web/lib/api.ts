@@ -33,7 +33,8 @@ export interface ModelConfig {
 }
 
 export async function apiHealth(): Promise<{ status: string; device: string }> {
-  const res = await fetch(`${API_URL}/api/health`, { signal: AbortSignal.timeout(5000) })
+  const res = await fetch(`${API_URL}/api/health`, { signal: AbortSignal.timeout(60_000) })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }
 
@@ -52,7 +53,10 @@ export async function predictImage(file: File, cfg: ModelConfig): Promise<ImageR
   form.append("imgsz", cfg.imgsz.toString())
   form.append("isolate", cfg.isolate.toString())
   form.append("mask_overlap_thr", cfg.mask_overlap_thr.toString())
-  const res = await fetch(`${API_URL}/api/predict/image`, { method: "POST", body: form })
+  const res = await fetch(`${API_URL}/api/predict/image`, {
+    method: "POST", body: form,
+    signal: AbortSignal.timeout(120_000),
+  })
   if (!res.ok) throw new Error(`Server error ${res.status}: ${await res.text()}`)
   return res.json()
 }
@@ -69,7 +73,10 @@ export async function predictVideo(
   form.append("iou", cfg.iou.toString())
   form.append("imgsz", cfg.imgsz.toString())
   form.append("step", step.toString())
-  const res = await fetch(`${API_URL}/api/predict/video`, { method: "POST", body: form })
+  const res = await fetch(`${API_URL}/api/predict/video`, {
+    method: "POST", body: form,
+    signal: AbortSignal.timeout(600_000),
+  })
   if (!res.ok) throw new Error(`Server error ${res.status}: ${await res.text()}`)
   const statsHeader = res.headers.get("X-Stats")
   const stats: VideoStats = statsHeader
