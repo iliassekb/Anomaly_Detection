@@ -1,0 +1,316 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─────────────────────────────────────────────────────────────────
+   DefectVision — Design System
+   Industrial precision with warm depth
+   ───────────────────────────────────────────────────────────────── */
+
+/* Light */
+:root {
+  --bg:              #F5F4F0;
+  --surface:         #FFFFFF;
+  --surface-alt:     #EDEBE5;
+  --border:          #DDD9D2;
+  --border-strong:   #C4BFB6;
+  --text-primary:    #18171A;
+  --text-secondary:  #605C6B;
+  --text-muted:      #9B96A3;
+  --accent:          #4F46E5;
+  --accent-hover:    #4338CA;
+  --accent-surface:  rgba(79, 70, 229, 0.07);
+  --accent-border:   rgba(79, 70, 229, 0.22);
+  --success:         #16A34A;
+  --success-surface: rgba(22, 163, 74, 0.07);
+  --success-border:  rgba(22, 163, 74, 0.2);
+  --danger:          #DC2626;
+  --danger-surface:  rgba(220, 38, 38, 0.07);
+  --danger-border:   rgba(220, 38, 38, 0.2);
+  --header-bg:       #FFFFFF;
+  --sidebar-bg:      #EEECEA;
+  --shadow-sm:       0 1px 3px rgba(0,0,0,0.07), 0 1px 1px rgba(0,0,0,0.03);
+  --shadow-md:       0 3px 8px rgba(0,0,0,0.09), 0 1px 2px rgba(0,0,0,0.04);
+  --radius-sm:       5px;
+  --radius-md:       7px;
+  --radius-lg:       10px;
+  /* component aliases */
+  --text-1:          #18171A;
+  --text-2:          #605C6B;
+  --text-3:          #9B96A3;
+  --input-bg:        #EDEBE5;
+  --bg-overlay:      #FFFFFF;
+  --accent-faint:    rgba(79, 70, 229, 0.08);
+  --danger-faint:    rgba(220, 38, 38, 0.06);
+}
+
+/* Dark */
+:root.dark {
+  --bg:              #111014;
+  --surface:         #1A1920;
+  --surface-alt:     #22212A;
+  --border:          #2C2B35;
+  --border-strong:   #3A3848;
+  --text-primary:    #E6E3EE;
+  --text-secondary:  #857EA0;
+  --text-muted:      #524E63;
+  --accent:          #818CF8;
+  --accent-hover:    #A5B4FC;
+  --accent-surface:  rgba(129, 140, 248, 0.10);
+  --accent-border:   rgba(129, 140, 248, 0.28);
+  --success:         #22C55E;
+  --success-surface: rgba(34, 197, 94, 0.09);
+  --success-border:  rgba(34, 197, 94, 0.22);
+  --danger:          #F87171;
+  --danger-surface:  rgba(248, 113, 113, 0.09);
+  --danger-border:   rgba(248, 113, 113, 0.22);
+  --header-bg:       #1A1920;
+  --sidebar-bg:      #14131A;
+  --shadow-sm:       0 1px 3px rgba(0,0,0,0.28), 0 1px 1px rgba(0,0,0,0.16);
+  --shadow-md:       0 3px 10px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.18);
+  /* component aliases */
+  --text-1:          #E6E3EE;
+  --text-2:          #857EA0;
+  --text-3:          #524E63;
+  --input-bg:        #22212A;
+  --bg-overlay:      #1A1920;
+  --accent-faint:    rgba(129, 140, 248, 0.10);
+  --danger-faint:    rgba(248, 113, 113, 0.08);
+}
+
+/* ── Base ──────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  background-color: var(--bg);
+  color: var(--text-primary);
+  font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+/* ── Range inputs ──────────────────────────────────────────────── */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 3px;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+  width: 100%;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--surface);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.22);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+input[type="range"]::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--accent); border: 2px solid var(--surface);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.22); cursor: pointer;
+}
+
+/* ── History panel rows ────────────────────────────────────────── */
+.history-row {
+  transition: background 0.1s;
+  cursor: default;
+}
+.history-row:hover {
+  background: var(--surface-alt);
+}
+.history-row:hover .history-remove {
+  opacity: 1 !important;
+}
+
+/* ── Utility classes ───────────────────────────────────────────── */
+@layer utilities {
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.9px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .field-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    padding: 8px 16px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background 0.15s, opacity 0.15s, transform 0.1s;
+    font-family: inherit;
+    white-space: nowrap;
+    line-height: 1;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.38; cursor: not-allowed; transform: none; }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent-hover);
+  }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--text-secondary);
+    border-color: var(--border-strong);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--surface-alt);
+    color: var(--text-primary);
+  }
+
+  /* Drop zones */
+  .dropzone {
+    border: 1.5px dashed var(--border-strong);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .dropzone:hover, .dropzone.active {
+    border-color: var(--accent);
+    background: var(--accent-surface);
+  }
+
+  /* Status pills */
+  .status-ok {
+    background: var(--success-surface);
+    border: 1px solid var(--success-border);
+    color: var(--success);
+  }
+  .status-fail {
+    background: var(--danger-surface);
+    border: 1px solid var(--danger-border);
+    color: var(--danger);
+  }
+
+  /* Segmented buttons */
+  .seg-btn {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.12s;
+    font-family: inherit;
+    line-height: 1;
+  }
+  .seg-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .seg-btn:not(.active):hover {
+    border-color: var(--border-strong);
+    color: var(--text-secondary);
+  }
+
+  /* Select */
+  .select-field {
+    width: 100%;
+    appearance: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 30px 8px 10px;
+    font-size: 13px;
+    color: var(--text-primary);
+    cursor: pointer;
+    outline: none;
+    font-family: inherit;
+    transition: border-color 0.12s;
+  }
+  .select-field:focus { border-color: var(--accent); }
+
+  /* Toggle */
+  .toggle-track {
+    width: 32px; height: 18px; border-radius: 9px;
+    cursor: pointer; flex-shrink: 0;
+    transition: background 0.15s; position: relative;
+  }
+  .toggle-thumb {
+    position: absolute; top: 2px; width: 14px; height: 14px;
+    border-radius: 50%; background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    transition: transform 0.15s;
+  }
+
+  /* Scrollbar */
+  .scroll::-webkit-scrollbar { width: 4px; }
+  .scroll::-webkit-scrollbar-track { background: transparent; }
+  .scroll::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
+
+  /* Legacy aliases */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .drop-zone {
+    border: 1.5px dashed var(--border-strong);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .drop-zone:hover, .drop-zone.dragging {
+    border-color: var(--accent);
+    background: var(--accent-faint);
+  }
+
+  .btn-ghost {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 500; border-radius: 8px;
+    padding: 8px 14px; cursor: pointer;
+    border: 1px solid var(--border); background: transparent;
+    color: var(--text-secondary);
+    transition: background 0.15s, color 0.15s;
+    font-family: inherit; line-height: 1;
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--surface-alt);
+    color: var(--text-primary);
+  }
+  .btn-ghost:disabled { opacity: 0.38; cursor: not-allowed; }
+
+  .label {
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.4px; color: var(--text-muted);
+  }
+}
