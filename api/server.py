@@ -26,6 +26,18 @@ DEFAULT_WEIGHTS = "weights/best_m.pt"
 HF_SPACE_REPO = "imad9/defectvision"
 
 app = FastAPI(title="DefectVision API", version="1.0")
+
+
+@app.on_event("startup")
+def startup():
+    try:
+        from api.minio_client import init_buckets
+        init_buckets()
+    except Exception as e:
+        import logging
+        logging.warning(f"MinIO init skipped: {e}")
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
