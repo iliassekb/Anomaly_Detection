@@ -5,6 +5,7 @@ import { Upload, Download, Loader2, FileImage } from "lucide-react"
 import { predictImage, ImageResult, ModelConfig } from "@/lib/api"
 import { HistoryEntry } from "@/hooks/useHistory"
 import DetectionResults from "./DetectionResults"
+import FeedbackModal from "./FeedbackModal"
 
 interface Props {
   config: ModelConfig
@@ -178,6 +179,15 @@ export default function ImageDetector({ config, onDetection }: Props) {
                 inference_ms={r.inference_ms}
                 is_anomaly={r.is_anomaly}
               />
+
+              {r.is_anomaly && (
+                <FeedbackModal
+                  imageB64={r.original_b64}
+                  filename={files[idx]?.name ?? "image.jpg"}
+                  detections={r.detections}
+                  annotatedB64={r.annotated_b64}
+                />
+              )}
             </div>
           )}
         </div>

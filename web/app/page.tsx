@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Settings, Sun, Moon, ChevronDown, History } from "lucide-react"
+import Link from "next/link"
+import { Settings, Sun, Moon, ChevronDown, History, Database } from "lucide-react"
 import ImageDetector from "@/components/ImageDetector"
 import VideoDetector from "@/components/VideoDetector"
 import WebcamDetector from "@/components/WebcamDetector"
@@ -151,6 +152,13 @@ export default function Page() {
               {status === "ok" ? device : status === "error" ? "Offline" : "Connecting…"}
             </span>
           </div>
+
+          <div style={{ width: 1, height: 18, background: "var(--border)", margin: "0 2px" }} />
+
+          {/* Dataset link */}
+          <Link href="/dataset" className="btn btn-secondary" style={{ padding: "5px 10px", textDecoration: "none" }} title="Dataset Manager">
+            <Database size={13} />
+          </Link>
 
           <div style={{ width: 1, height: 18, background: "var(--border)", margin: "0 2px" }} />
 

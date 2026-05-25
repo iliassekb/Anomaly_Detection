@@ -37,6 +37,15 @@ def startup():
         import logging
         logging.warning(f"MinIO init skipped: {e}")
 
+from api.dataset import router as dataset_router
+from api.sam import router as sam_router
+from api.training import router as training_router
+from api.feedback import router as feedback_router
+app.include_router(dataset_router)
+app.include_router(sam_router)
+app.include_router(training_router)
+app.include_router(feedback_router)
+
 
 app.add_middleware(
     CORSMiddleware,

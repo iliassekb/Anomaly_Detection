@@ -27,6 +27,24 @@ def init_buckets() -> None:
     for bucket in (BUCKET, "defectvision-mlflow"):
         if not client.bucket_exists(bucket):
             client.make_bucket(bucket)
+    _seed_classes_from_model()
+
+
+def _seed_classes_from_model() -> None:
+    """Populate classes.json from best_m.pt model.names if not yet present."""
+    if object_exists("classes.json"):
+        return
+    weights_path = os.getenv("MODEL_WEIGHTS", "weights/best_m.pt")
+    if not os.path.exists(weights_path):
+        return
+    try:
+        from ultralytics import YOLO
+        model = YOLO(weights_path)
+        names: dict = model.names  # {0: "good", 1: "crack", ...}
+        classes = {name: idx for idx, name in names.items()}
+        update_classes(classes)
+    except Exception:
+        pass
 
 
 # ── classes.json helpers ──────────────────────────────────────────
