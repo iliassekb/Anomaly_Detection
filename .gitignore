@@ -2,45 +2,50 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .env
+.claude/
 .venv/
 venv/
+pfe_env/
 dist/
 build/
 
-# Data & checkpoints (too large for git)
+# Data (too large for git)
 data/
-experiments/
 
-# Model weights (too large for git)
+# Model weights
+weights/
 *.pt
-best/
+
+# Training run artifacts
+experiments/results/
+experiments/yolo_runs/
+experiments/checkpoints/
+notebooks/runs/
+mvtec3d_anomaly_type3/
+
+# Generated media
+*.mp4
+*.csv
 
 # Notebooks checkpoints
 .ipynb_checkpoints/
 
-# Virtual env
-pfe_env/
-
-# Large media
-output.mp4
-test_video*.mp4
+# Result images
 resultats/
+photos/
 
 # IDE
 .vscode/
 .idea/
 
-# Documentation
-docs/
-Cahier_des_Charges_Detection_Anomalies_3D_Industrielles.pdf
-
-# Docker
-Dockerfile
-
-# Streamlit Cloud
-.streamlit/secrets.toml
-
 # Next.js / web
 web/node_modules/
 web/.next/
 web/tsconfig.tsbuildinfo
+
+# Docker volumes
+minio_data/
+mlflow_data/
+
+# Streamlit
+.streamlit/secrets.toml

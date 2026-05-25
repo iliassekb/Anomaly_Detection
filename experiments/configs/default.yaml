@@ -1,0 +1,36 @@
+dataset:
+  root: data/raw
+  category: bagel          # MVTec 3D-AD category
+  n_points: 2048
+  augment: true
+
+# ── Model ─────────────────────────────────────────────────────────────────────
+# type options:
+#   ae        — PointNet++ encoder + FoldingNet decoder  (recommended)
+#   vae       — PointNet++ VAE encoder + FoldingNet decoder
+#   graph_ae  — DGCNN encoder + FoldingNet decoder
+#   simple_ae — original MLP encoder + MLP decoder  (fast baseline)
+model:
+  type: ae
+  latent_dim: 256           # 256 > 64: richer geometric representation
+
+# ── Training ──────────────────────────────────────────────────────────────────
+training:
+  batch_size: 16            # increased from 8; stable gradients with BN
+  epochs: 150               # more epochs to fully converge PointNet++ SA layers
+  lr: 0.0005                # slightly lower LR for stable PointNet++ training
+  weight_decay: 0.00001
+  beta: 0.001               # KL weight for VAE
+  density_weight: 0.05      # weight for density regularization loss
+  patience: 20              # early stopping patience (increased for deeper model)
+
+# ── Evaluation ────────────────────────────────────────────────────────────────
+evaluation:
+  threshold: 0.5            # anomaly score threshold
+  scorer: combined          # recon | memory_bank | combined
+  memory_bank_k: 5          # k for kNN in memory bank
+  memory_bank_alpha: 0.4    # weight of recon score in combined scorer
+
+# ── Reproducibility ───────────────────────────────────────────────────────────
+seed: 42
+device: cuda                # use 'cpu' if no GPU available

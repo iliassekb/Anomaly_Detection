@@ -1,0 +1,1122 @@
+%% ============================================================
+%%  Rapport de Stage de Fin d'Etudes (PFE)
+%%  Detection d'Anomalies Industrielles par Deep Learning
+%%  Auteur  : Imad Sanoussi
+%%  FSAC  -- Master Data Science -- 2025/2026
+%%  Compatible Overleaf - compilez avec pdfLaTeX
+%% ============================================================
+
+\documentclass[12pt, a4paper]{report}
+
+%% ---------- Encodage & Langue ----------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+
+%% ---------- Mise en page ----------
+\usepackage[
+  top=2.5cm, bottom=2.5cm,
+  left=3cm,  right=2.5cm,
+  headheight=15pt
+]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{emptypage}
+\usepackage{parskip}
+\setlength{\parskip}{6pt}
+
+%% ---------- Polices ----------
+\usepackage{lmodern}
+
+%% ---------- Couleurs ----------
+\usepackage{xcolor}
+\definecolor{themeblue}{RGB}{70, 130, 195}
+\definecolor{themebluedark}{RGB}{35, 80, 145}
+\definecolor{themebluelight}{RGB}{140, 190, 235}
+\definecolor{themebluevlight}{RGB}{210, 230, 248}
+\definecolor{textmid}{RGB}{80, 100, 130}
+\definecolor{greenok}{RGB}{39, 174, 96}
+\definecolor{reddanger}{RGB}{192, 57, 43}
+\definecolor{codebg}{RGB}{245, 247, 250}
+
+%% ---------- Graphiques & Figures ----------
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\captionsetup{font=small, labelfont={bf,color=themebluedark}}
+
+%% ---------- Tableaux ----------
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{colortbl}
+\usepackage{tabularx}
+
+%% ---------- Mathematiques ----------
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+%% ---------- Code ----------
+\usepackage{listings}
+\lstset{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{themebluelight},
+  keywordstyle=\color{themebluedark}\bfseries,
+  commentstyle=\color{textmid}\itshape,
+  stringstyle=\color{greenok},
+  numbers=left,
+  numberstyle=\tiny\color{textmid},
+  numbersep=8pt,
+}
+
+%% ---------- TikZ ----------
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds, calc}
+
+%% ---------- En-tetes & Pieds de page ----------
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{textmid}\leftmark}
+\fancyhead[R]{\small\color{textmid}PFE 2025--2026}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{themebluelight}\leaders\hrule height \headrulewidth\hfill}}
+
+%% ---------- Chapitres & Sections ----------
+\usepackage{titlesec}
+\titleformat{\chapter}[display]
+  {\normalfont\huge\bfseries\color{themebluedark}}
+  {\chaptertitlename\ \thechapter}{20pt}{\Huge}
+\titlespacing*{\chapter}{0pt}{30pt}{20pt}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{themeblue}}
+  {\thesection}{1em}{}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{themebluedark}}
+  {\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+  {\normalfont\normalsize\bfseries\color{textmid}}
+  {\thesubsubsection}{1em}{}
+
+%% ---------- Table des matieres ----------
+\usepackage{tocloft}
+\renewcommand{\cftchapfont}{\bfseries\color{themebluedark}}
+\renewcommand{\cftsecfont}{\color{themeblue}}
+\renewcommand{\cftsubsecfont}{\color{textmid}}
+\setlength{\cftbeforechapskip}{8pt}
+
+%% ---------- Liens & References ----------
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks = true,
+  linkcolor  = themebluedark,
+  citecolor  = themeblue,
+  urlcolor   = themeblue,
+  pdftitle   = {Rapport PFE -- Detection d'Anomalies Industrielles par Deep Learning},
+  pdfauthor  = {Imad Sanoussi},
+}
+\usepackage[style=ieee, backend=bibtex]{biblatex}
+\addbibresource{references.bib}
+
+%% ---------- Acronymes ----------
+\usepackage{acronym}
+
+%% ---------- Fallback figure (si image absente sur Overleaf) ----------
+\newcommand{\safefig}[3]{%
+  \IfFileExists{#1}{%
+    \includegraphics[#2]{#1}%
+  }{%
+    \fbox{\parbox{\linewidth}{\centering\vspace{1.8cm}%
+      \textcolor{textmid}{\small\texttt{[#3]}}%
+      \vspace{1.8cm}}}%
+  }%
+}
+
+%% ---------- Boites colorees ----------
+\usepackage{tcolorbox}
+
+\newtcolorbox{infobox}[1][]{
+  colback=themebluevlight, colframe=themeblue,
+  fonttitle=\bfseries, title=#1, arc=4pt,
+}
+\newtcolorbox{notebox}{
+  colback=greenok!10, colframe=greenok!70,
+  fonttitle=\bfseries\color{greenok!80!black}, title=Remarque, arc=4pt,
+}
+\newtcolorbox{warnbox}{
+  colback=reddanger!8, colframe=reddanger!70,
+  fonttitle=\bfseries\color{reddanger}, title=Attention, arc=4pt,
+}
+
+%% ============================================================
+\begin{document}
+%% ============================================================
+
+%% ============================================================
+%%  PAGE DE GARDE
+%% ============================================================
+\begin{titlepage}
+\begin{tikzpicture}[remember picture, overlay]
+  \fill[white] (current page.south west) rectangle (current page.north east);
+
+  %% Blob haut droit
+  \foreach \r/\op in {5.5/0.08, 4.5/0.11, 3.5/0.14, 2.5/0.18, 1.5/0.14}{
+    \fill[themeblue, opacity=\op]
+      ([xshift=1cm, yshift=-0.8cm]current page.north east) circle (\r cm);
+  }
+  %% Blob bas gauche
+  \foreach \r/\op in {4.0/0.07, 3.0/0.10, 2.0/0.13}{
+    \fill[themeblue, opacity=\op]
+      ([xshift=0.8cm, yshift=0.8cm]current page.south west) circle (\r cm);
+  }
+
+  %% Bandeau superieur
+  \fill[themebluedark]
+    (current page.north west) rectangle ([yshift=-1.2cm]current page.north east);
+  \node[text=white, font=\normalsize\bfseries]
+    at ([yshift=-0.6cm]current page.north)
+    {Universit\'e Hassan II de Casablanca --- Facult\'e des Sciences Ain Chok};
+
+  %% Bandeau inferieur
+  \fill[themebluedark]
+    (current page.south west) rectangle ([yshift=1.0cm]current page.south east);
+  \node[text=white, font=\small]
+    at ([yshift=0.5cm]current page.south)
+    {Ann\'ee universitaire 2025 -- 2026};
+
+  %% Badge PFE
+  \fill[themeblue]
+    ([xshift=1.5cm, yshift=-2.0cm]current page.north west)
+    rectangle ([xshift=4.5cm, yshift=-2.5cm]current page.north west);
+  \node[text=white, font=\small\bfseries]
+    at ([xshift=3.0cm, yshift=-2.25cm]current page.north west)
+    {RAPPORT PFE};
+
+  %% Ligne verticale decorative
+  \draw[themeblue!60, line width=2pt]
+    ([xshift=1.5cm, yshift=-2.8cm]current page.north west)
+    -- ([xshift=1.5cm, yshift=3.0cm]current page.south west);
+
+  %% Titre
+  \node[anchor=west, text=themebluedark, font=\fontsize{24}{30}\bfseries,
+        align=left, text width=13cm]
+    at ([xshift=2.0cm, yshift=3.5cm]current page.west)
+    {D\'etection d'Anomalies Industrielles\\par Deep Learning};
+
+  %% Sous-titre
+  \node[anchor=west, text=themeblue, font=\large\itshape]
+    at ([xshift=2.0cm, yshift=1.8cm]current page.west)
+    {YOLO26s-seg Instance Segmentation sur MVTec 3D-AD};
+
+  %% Separateur
+  \draw[themeblue!40, line width=0.8pt]
+    ([xshift=2.0cm, yshift=1.2cm]current page.west)
+    -- ([xshift=14cm, yshift=1.2cm]current page.west);
+
+  %% Informations
+  \node[anchor=west, text=textmid, font=\normalsize\bfseries]
+    at ([xshift=2.0cm, yshift=0.6cm]current page.west) {R\'ealis\'e par :};
+  \node[anchor=west, text=themebluedark, font=\normalsize]
+    at ([xshift=5.5cm, yshift=0.6cm]current page.west) {Imad Sanoussi};
+
+  \node[anchor=west, text=textmid, font=\normalsize\bfseries]
+    at ([xshift=2.0cm, yshift=0.0cm]current page.west) {Encadrant :};
+  \node[anchor=west, text=themebluedark, font=\normalsize]
+    at ([xshift=5.5cm, yshift=0.0cm]current page.west) {M. Hamza Mouncif};
+
+  \node[anchor=west, text=textmid, font=\normalsize\bfseries]
+    at ([xshift=2.0cm, yshift=-0.6cm]current page.west) {Formation :};
+  \node[anchor=west, text=themebluedark, font=\normalsize]
+    at ([xshift=5.5cm, yshift=-0.6cm]current page.west)
+    {Master Data Science --- FSAC};
+
+  \node[anchor=west, text=textmid, font=\normalsize\bfseries]
+    at ([xshift=2.0cm, yshift=-1.2cm]current page.west) {Ann\'ee :};
+  \node[anchor=west, text=themebluedark, font=\normalsize]
+    at ([xshift=5.5cm, yshift=-1.2cm]current page.west) {2025 -- 2026};
+
+  %% Logo placeholder
+  \draw[themebluelight, dashed, line width=0.8pt, rounded corners=4pt]
+    ([xshift=12cm, yshift=-0.5cm]current page.west)
+    rectangle ([xshift=15cm, yshift=-2.5cm]current page.west);
+  \node[text=textmid, font=\scriptsize]
+    at ([xshift=13.5cm, yshift=-1.5cm]current page.west) {Logo FSAC};
+
+\end{tikzpicture}
+\end{titlepage}
+
+%% ============================================================
+%%  DEDICACE
+%% ============================================================
+\newpage
+\thispagestyle{empty}
+\vspace*{6cm}
+\begin{flushright}
+  \itshape\large
+  \`A ma famille,\\
+  source de force et d'inspiration,\\
+  et \`a tous ceux qui ont cru en moi.
+\end{flushright}
+\newpage
+
+%% ============================================================
+%%  REMERCIEMENTS
+%% ============================================================
+\chapter*{Remerciements}
+\addcontentsline{toc}{chapter}{Remerciements}
+\markboth{Remerciements}{Remerciements}
+
+Je tiens à exprimer ma profonde gratitude envers toutes les personnes qui ont contribué, de près ou de loin, à la réalisation de ce travail.
+
+Je remercie chaleureusement \textbf{M. Hamza Mouncif}, mon encadrant pédagogique, pour sa disponibilité, ses précieux conseils et son accompagnement tout au long de ce projet. Ses orientations m'ont permis de progresser dans la bonne direction et d'appréhender les problématiques industrielles avec rigueur.
+
+Je remercie également l'équipe pédagogique du \textbf{Master Data Science de la FSAC} pour la qualité de la formation dispensée et les compétences acquises durant ces années.
+
+Enfin, je remercie ma famille pour son soutien indéfectible et ses encouragements tout au long de mon parcours universitaire.
+
+\newpage
+
+%% ============================================================
+%%  RESUME
+%% ============================================================
+\chapter*{Résumé}
+\addcontentsline{toc}{chapter}{Résumé}
+\markboth{Résumé}{Résumé}
+
+\noindent\textbf{Mots-clés :} détection d'anomalies, deep learning, YOLO26s-seg, segmentation d'instance multi-classes, MVTec 3D-AD, contrôle qualité industriel, Streamlit.
+
+\vspace{0.5cm}
+
+Ce rapport présente les travaux réalisés dans le cadre du projet de fin d'études (PFE) portant sur la \textbf{détection automatique d'anomalies industrielles par deep learning}. L'objectif est de concevoir un système de contrôle qualité visuel capable de localiser et classifier les défauts de surface sur des pièces industrielles, en substituant l'inspection manuelle par une approche automatisée et robuste.
+
+Notre solution repose sur \textbf{YOLO26s-seg}, un modèle de segmentation d'instance entraîné sur le dataset \textbf{MVTec 3D-AD} — une référence industrielle comprenant 10 catégories d'objets (bagel, carrot, foam, tire, etc.) avec des données RGB et des nuages de points XYZ. Le modèle YOLO26s-seg a été sélectionné pour son compromis optimal entre précision et vitesse : 10,1M paramètres, 35,5 GFLOPs.
+
+Une approche de \textbf{segmentation multi-classes} (8 types de défauts : bent, color, contamination, crack, cut, hole, scratch, thread) a été développée. Un pipeline de préparation des données incluant la construction des labels YOLO et une augmentation $\times 5$ (Albumentations) a permis de porter le dataset de \textasciitilde1258 à \textasciitilde6290 images.
+
+Les résultats obtenus sur le jeu de validation atteignent un \textbf{mAP@0.5 (Mask) de 0.839} et un \textbf{mAP@0.5:0.95 de 0.507}, démontrant la capacité du modèle à localiser les anomalies au niveau pixel. Une interface de démonstration professionnelle \textbf{DefectVision Pro} a été développée avec Streamlit, intégrant la détection sur image, vidéo et webcam.
+
+\vspace{0.5cm}
+\noindent\rule{\textwidth}{0.4pt}
+
+\noindent\textbf{Abstract}
+
+\vspace{0.3cm}
+\noindent\textit{Keywords: anomaly detection, deep learning, YOLO26s-seg, multi-class instance segmentation, MVTec 3D-AD, industrial quality control, Streamlit.}
+
+\vspace{0.3cm}
+
+This report presents the work carried out as part of the final year project (PFE) on \textbf{automatic industrial anomaly detection using deep learning}. The objective is to design a visual quality control system capable of localizing and classifying surface defects on industrial parts. Our solution is based on \textbf{YOLO26s-seg} trained on the \textbf{MVTec 3D-AD} dataset, covering 10 industrial object categories. A multi-class segmentation approach with 8 defect types was developed. Results achieve mAP@0.5 (Mask) = 0.839 and mAP@0.5:0.95 = 0.507. A professional demonstration interface \textit{DefectVision Pro} was built with Streamlit.
+
+\newpage
+
+%% ============================================================
+%%  ACRONYMES
+%% ============================================================
+\chapter*{Liste des Acronymes}
+\addcontentsline{toc}{chapter}{Liste des Acronymes}
+\markboth{Liste des Acronymes}{Liste des Acronymes}
+
+\begin{acronym}[YOLO26s]
+  \acro{PFE}{Projet de Fin d'Études}
+  \acro{DL}{Deep Learning}
+  \acro{CNN}{Convolutional Neural Network}
+  \acro{YOLO}{You Only Look Once}
+  \acro{mAP}{mean Average Precision}
+  \acro{IoU}{Intersection over Union}
+  \acro{RGB}{Red Green Blue}
+  \acro{XYZ}{coordonnées 3D cartésiennes}
+  \acro{EDA}{Exploratory Data Analysis}
+  \acro{GT}{Ground Truth}
+  \acro{FP}{False Positive}
+  \acro{FN}{False Negative}
+  \acro{TP}{True Positive}
+  \acro{QC}{Quality Control}
+  \acro{GPU}{Graphics Processing Unit}
+  \acro{FSAC}{Faculté des Sciences Aïn Chok}
+  \acro{NMS}{Non-Maximum Suppression}
+  \acro{FPN}{Feature Pyramid Network}
+  \acro{AP}{Average Precision}
+\end{acronym}
+
+\newpage
+
+%% ============================================================
+%%  TABLE DES MATIERES
+%% ============================================================
+\tableofcontents
+\newpage
+
+%% ============================================================
+%%  LISTE DES FIGURES
+%% ============================================================
+\listoffigures
+\addcontentsline{toc}{chapter}{Liste des Figures}
+\newpage
+
+%% ============================================================
+%%  LISTE DES TABLEAUX
+%% ============================================================
+\listoftables
+\addcontentsline{toc}{chapter}{Liste des Tableaux}
+\newpage
+
+%% ============================================================
+%%  INTRODUCTION GENERALE
+%% ============================================================
+\chapter*{Introduction Générale}
+\addcontentsline{toc}{chapter}{Introduction Générale}
+\markboth{Introduction Générale}{Introduction Générale}
+
+Dans un contexte industriel de plus en plus compétitif, le contrôle qualité des produits constitue un enjeu stratégique majeur. La détection précoce des défauts de surface permet de réduire les coûts de production, d'améliorer la satisfaction client et d'éviter des rappels de produits coûteux. Traditionnellement assurée par des opérateurs humains, cette inspection présente des limites évidentes : fatigue, inconsistance entre opérateurs, impossibilité de fonctionner 24h/24 et faible taux de détection pour les défauts subtils.
+
+L'essor du \textbf{deep learning} et notamment des architectures de \textbf{segmentation d'instance} offre aujourd'hui une alternative puissante à l'inspection manuelle. Ces modèles sont capables d'analyser des images à grande vitesse, de localiser précisément les anomalies au niveau pixel et de généraliser sur des environnements variés.
+
+Ce projet de fin d'études s'inscrit dans cette dynamique en proposant un système de détection automatique d'anomalies industrielles basé sur \textbf{YOLO26s-seg}, un modèle de segmentation d'instance performant de la famille YOLO. Le dataset utilisé est le \textbf{MVTec 3D-AD}, une référence académique et industrielle comportant 10 catégories d'objets avec des données RGB et 3D. Une interface de démonstration professionnelle — \textbf{DefectVision Pro} — a été développée avec Streamlit pour valider le système en conditions réelles.
+
+\vspace{0.5cm}
+\noindent Ce rapport est organisé comme suit :
+
+\begin{itemize}
+  \item \textbf{Chapitre 1} : État de l'art — panorama des méthodes de détection d'anomalies industrielles, des approches classiques à la segmentation d'instance supervisée.
+  \item \textbf{Chapitre 2} : Contexte et problématique — présentation du domaine industriel, des enjeux et formulation de la problématique.
+  \item \textbf{Chapitre 3} : Dataset et pipeline de données — description du MVTec 3D-AD, EDA, construction des labels et augmentation.
+  \item \textbf{Chapitre 4} : Architecture YOLO26s-seg — présentation du modèle, choix justifié et paramètres d'entraînement.
+  \item \textbf{Chapitre 5} : Résultats et visualisation — métriques globales et par classe, courbes d'apprentissage et prédictions.
+  \item \textbf{Chapitre 6} : Interface DefectVision Pro — description de l'application Streamlit développée.
+  \item \textbf{Chapitre 7} : Difficultés et solutions — défis rencontrés et stratégies mises en place.
+  \item \textbf{Conclusion et perspectives} — bilan et ouvertures.
+\end{itemize}
+
+\newpage
+
+%% ============================================================
+%%  CHAPITRE 1 : CONTEXTE & PROBLEMATIQUE
+%% ============================================================
+\chapter{Contexte et Problématique}
+
+\section{Contexte industriel}
+
+Le contrôle qualité visuel est une étape incontournable dans les lignes de production industrielle. Il vise à détecter les défauts de surface — rayures, bosses, inclusions, contaminations — avant que les pièces ne soient livrées aux clients ou intégrées dans des assemblages plus complexes. Dans les secteurs de l'automobile, de l'électronique, de l'agroalimentaire et de l'aéronautique, la moindre non-conformité peut entraîner des conséquences graves sur la sécurité et la réputation de l'entreprise.
+
+\subsection{Limites de l'inspection manuelle}
+
+L'inspection manuelle, longtemps seule méthode disponible, souffre de plusieurs limitations majeures :
+
+\begin{itemize}
+  \item \textbf{Fatigue opérateur} : un inspecteur ne peut pas maintenir un niveau d'attention constant sur plusieurs heures, induisant un taux d'erreur croissant.
+  \item \textbf{Variabilité inter-opérateurs} : les critères de rejet ne sont pas appliqués uniformément selon les individus.
+  \item \textbf{Faible couverture temporelle} : impossible de fonctionner 24h/24 sans rotation importante des équipes.
+  \item \textbf{Taux de faux négatifs élevé} : les défauts subtils (micro-fissures, légères décolorations) passent souvent inaperçus.
+  \item \textbf{Coût élevé} : mobiliser un opérateur qualifié par ligne de production représente un coût significatif.
+\end{itemize}
+
+\section{Problématique}
+
+Face à ces limitations, la question centrale de ce projet est la suivante :
+
+\begin{infobox}[Problématique]
+Comment concevoir un système automatisé, basé sur le deep learning, capable de \textbf{détecter, localiser et classifier par type} les anomalies de surface sur des pièces industrielles hétérogènes, en utilisant uniquement des données d'images 2D (RGB) issues d'un dataset 3D de référence ?
+\end{infobox}
+
+\section{État de l'art}
+
+\subsection{Approches classiques}
+
+Les premières méthodes de détection automatique d'anomalies reposaient sur des techniques de vision par ordinateur traditionnelle : seuillage, détection de contours (Canny, Sobel), corrélation de templates et analyse de texture (LBP, Gabor). Ces approches sont rapides mais manquent de robustesse face à la variabilité des éclairages et des poses.
+
+\subsection{Méthodes basées sur le deep learning}
+
+L'avènement des réseaux de neurones convolutifs (CNN) a transformé le domaine :
+
+\begin{itemize}
+  \item \textbf{Autoencodeurs} (AE, VAE) : apprennent une reconstruction d'images normales et détectent les anomalies comme des zones à forte erreur de reconstruction.
+  \item \textbf{Normalizing Flows} (FastFlow, PatchCore) : modélisent la distribution des caractéristiques normales dans l'espace latent.
+  \item \textbf{Détection d'objets} (YOLO, Faster R-CNN) : détectent et classifient les défauts en boîtes englobantes.
+  \item \textbf{Segmentation d'instance} (Mask R-CNN, YOLO-seg) : localisent les anomalies avec un masque pixel-level, offrant la précision la plus fine.
+\end{itemize}
+
+\subsection{Positionnement de notre approche}
+
+Notre travail se situe dans la catégorie de la \textbf{segmentation d'instance supervisée multi-classes}, en utilisant YOLO26s-seg. Ce choix est motivé par sa capacité à produire des masques de segmentation précis en temps réel tout en restant déployable sur du matériel standard, avec un excellent compromis entre précision (+4,6 pts mAP vs. variante nano) et vitesse d'inférence.
+
+\newpage
+
+%% ============================================================
+%%  CHAPITRE 2 : DATASET & PIPELINE
+%% ============================================================
+\chapter{Dataset et Pipeline de Données}
+
+\section{MVTec 3D-AD}
+
+\subsection{Présentation}
+
+Le \textbf{MVTec 3D Anomaly Detection dataset} \cite{mvtec3d} est un benchmark académique et industriel de référence pour la détection d'anomalies non supervisée et supervisée. Il se distingue des datasets 2D classiques par la présence de données de \textbf{nuages de points 3D (XYZ)} en plus des images RGB.
+
+\begin{table}[H]
+  \centering
+  \caption{Caractéristiques du dataset MVTec 3D-AD}
+  \label{tab:mvtec}
+  \begin{tabular}{lcccc}
+    \toprule
+    \rowcolor{themebluevlight}
+    \textbf{Catégorie} & \textbf{Train (normal)} & \textbf{Test (normal)} & \textbf{Test (anomalie)} & \textbf{Types défauts} \\
+    \midrule
+    Bagel       & 220 & 30 & 96  & 4 \\
+    Cable Gland & 229 & 30 & 80  & 5 \\
+    Carrot      & 271 & 30 & 106 & 5 \\
+    Cookie      & 221 & 30 & 93  & 4 \\
+    Dowel       & 280 & 30 & 100 & 5 \\
+    Foam        & 275 & 30 & 106 & 5 \\
+    Peach       & 251 & 30 & 105 & 5 \\
+    Potato      & 281 & 30 & 106 & 5 \\
+    Rope        & 253 & 30 & 104 & 4 \\
+    Tire        & 303 & 30 & 100 & 5 \\
+    \midrule
+    \textbf{Total} & \textbf{2584} & \textbf{300} & \textbf{$\sim$1258} & \textbf{8 types distincts} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Structure des données}
+
+Chaque sample du dataset contient :
+\begin{itemize}
+  \item \texttt{rgb/} : image couleur RGB (résolution $\sim 800 \times 800$ px)
+  \item \texttt{xyz/} : nuage de points 3D encodé en image à 3 canaux (coordonnées X, Y, Z)
+  \item \texttt{gt/} : masque Ground Truth des anomalies (image binaire)
+\end{itemize}
+
+Pour ce projet, \textbf{seules les images RGB et les masques GT} ont été utilisés, constituant une approche 2D pure compatible avec YOLO26s-seg.
+
+\section{Analyse Exploratoire des Données (EDA)}
+
+\subsection{Distribution des classes d'anomalies}
+
+L'EDA a révélé un \textbf{fort déséquilibre} entre les types de défauts. Les 8 types identifiés à travers les 10 catégories sont : \textit{bent, color, contamination, crack, cut, hole, scratch, thread}. Leur distribution approximative est la suivante :
+
+\begin{table}[H]
+  \centering
+  \caption{Distribution des types d'anomalies dans le dataset consolidé}
+  \label{tab:class_dist}
+  \begin{tabular}{lcc}
+    \toprule
+    \rowcolor{themebluevlight}
+    \textbf{Type d'anomalie} & \textbf{Instances ($\sim$)} & \textbf{Fréquence relative} \\
+    \midrule
+    crack         & 310 & 24,6\% \\
+    hole          & 290 & 23,1\% \\
+    cut           & 265 & 21,1\% \\
+    bent          & 155 & 12,3\% \\
+    scratch       & 125 & 9,9\%  \\
+    contamination & 80  & 6,4\%  \\
+    thread        & 38  & 3,0\%  \\
+    color         & 30  & 2,4\%  \\
+    \midrule
+    \textbf{Total} & \textbf{$\sim$1258} & \textbf{100\%} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{notebox}
+Les classes \textit{crack}, \textit{hole} et \textit{cut} représentent à elles seules $>68\%$ des instances, tandis que \textit{thread} et \textit{color} sont 8 à 10$\times$ moins représentées. Ce déséquilibre sévère a motivé l'utilisation de poids de classes inversement proportionnels à la fréquence.
+\end{notebox}
+
+\subsection{Visualisation des masques}
+
+Les masques GT sont des images binaires où les pixels blancs (valeur 255) indiquent une zone anormale. La surface des anomalies varie considérablement d'un sample à l'autre, allant de micro-défauts (quelques pixels pour \textit{thread}) à de larges zones corrompues (pour \textit{crack} ou \textit{hole}).
+
+\section{Construction du Dataset YOLO}
+
+\subsection{Conversion des masques en labels polygonaux}
+
+Le format YOLO-seg requiert des annotations sous forme de \textbf{contours polygonaux normalisés}. La conversion depuis les masques GT binaires se déroule en trois étapes :
+
+\begin{enumerate}
+  \item \textbf{Binarisation} du masque GT (seuillage à 127)
+  \item \textbf{Extraction des contours} via \texttt{cv2.findContours()} avec l'approximation \texttt{CHAIN\_APPROX\_SIMPLE}
+  \item \textbf{Normalisation} des coordonnées $(x, y)$ par la largeur et la hauteur de l'image, et écriture dans un fichier \texttt{.txt}
+\end{enumerate}
+
+\begin{lstlisting}[language=Python, caption=Conversion masque GT vers label YOLO-seg]
+import cv2
+import numpy as np
+
+def mask_to_yolo_seg(mask_path, img_w, img_h, class_id=0):
+    mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+    _, binary = cv2.threshold(mask, 127, 255, cv2.THRESH_BINARY)
+    contours, _ = cv2.findContours(
+        binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+    )
+    lines = []
+    for cnt in contours:
+        if cv2.contourArea(cnt) < 10:   # filtre bruit
+            continue
+        pts = cnt.reshape(-1, 2).astype(float)
+        pts[:, 0] /= img_w
+        pts[:, 1] /= img_h
+        coords = " ".join(f"{x:.6f} {y:.6f}" for x, y in pts)
+        lines.append(f"{class_id} {coords}")
+    return lines
+\end{lstlisting}
+
+\subsection{Structure du dataset YOLO final}
+
+\begin{lstlisting}[caption=Arborescence du dataset YOLO construit]
+dataset/
+  images/
+    train/   # ~6290 images apres augmentation
+    val/     # images de validation (20%)
+  labels/
+    train/   # fichiers .txt YOLO-seg correspondants
+    val/
+  dataset.yaml
+\end{lstlisting}
+
+\section{Augmentation des Données}
+
+Le faible nombre d'images annotées (\textasciitilde1258) a nécessité une augmentation agressive avec la bibliothèque \textbf{Albumentations}. Un facteur d'augmentation $\times 5$ a été appliqué, portant le dataset à \textbf{\textasciitilde6290 images}.
+
+\begin{table}[H]
+  \centering
+  \caption{Transformations d'augmentation appliquées (Albumentations)}
+  \label{tab:augmentation}
+  \begin{tabular}{lcc}
+    \toprule
+    \rowcolor{themebluevlight}
+    \textbf{Transformation} & \textbf{Paramètres} & \textbf{Probabilité} \\
+    \midrule
+    Flip horizontal      & --            & 0.5 \\
+    Flip vertical        & --            & 0.3 \\
+    Rotation             & $\pm 45°$     & 0.4 \\
+    Zoom (CropAndPad)    & $\pm 10\%$    & 0.3 \\
+    Bruit gaussien       & var=[10, 50]  & 0.3 \\
+    Flou gaussien        & k=[3, 7]      & 0.3 \\
+    Distorsion élastique & --            & 0.2 \\
+    Luminosité/Contraste & $\pm 20\%$   & 0.4 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\newpage
+
+%% ============================================================
+%%  CHAPITRE 3 : ARCHITECTURE YOLO26s-seg
+%% ============================================================
+\chapter{Architecture YOLO26s-seg}
+
+\section{La famille YOLO et choix du modèle}
+
+YOLO (\textit{You Only Look Once}) est une famille de modèles de détection d'objets en temps réel. Son principe fondamental est de formuler la détection comme un problème de régression unique, traitant l'image en un seul passage réseau. Au fil des versions, le modèle a évolué pour intégrer de nouvelles têtes de segmentation et de meilleures architectures d'extraction de caractéristiques.
+
+\subsection{Comparaison des variantes et justification du choix}
+
+\begin{table}[H]
+  \centering
+  \caption{Comparaison des variantes YOLO-seg pour ce projet}
+  \label{tab:yolo_variants}
+  \begin{tabular}{lcccc}
+    \toprule
+    \rowcolor{themebluevlight}
+    \textbf{Variante} & \textbf{Params (M)} & \textbf{GFLOPs} & \textbf{mAP-seg COCO} & \textbf{Décision} \\
+    \midrule
+    YOLO26n-seg & 2,9  & 10,4  & 38,3 & Trop léger \\
+    \rowcolor{greenok!15}
+    \textbf{YOLO26s-seg} & \textbf{10,1} & \textbf{35,5} & \textbf{42,9} & \textbf{Retenu} \\
+    YOLO26m-seg & 27,7 & 123,8 & 44,3 & Sur-paramétré \\
+    YOLO26l-seg & 46,3 & 207,7 & 45,2 & Sur-paramétré \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Le modèle \textbf{YOLO26s-seg} a été retenu pour trois raisons :
+\begin{itemize}
+  \item \textbf{Précision vs vitesse} : +4,6 pts mAP vs nano, latence compatible temps réel.
+  \item \textbf{Taille du dataset} : avec \textasciitilde6290 images, les variantes large risquent le surapprentissage.
+  \item \textbf{Déployabilité} : exportable ONNX/TensorRT, compatible caméras industrielles.
+\end{itemize}
+
+\section{Architecture YOLO26s-seg}
+
+\subsection{Composants principaux}
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+    box/.style={rectangle, rounded corners=4pt, minimum width=3.0cm, minimum height=0.85cm,
+                text centered, align=center, font=\small\bfseries, draw=themeblue, line width=0.8pt},
+    arrow/.style={->, >=stealth, themeblue, line width=1pt},
+    node distance=0.6cm and 0.5cm
+  ]
+    \node[box, fill=themebluelight!40] (input) {Image RGB\\$800\times800$};
+    \node[box, fill=themeblue!20, right=of input] (backbone) {Backbone\\C3k2 + SPPF};
+    \node[box, fill=themeblue!35, right=of backbone] (neck) {Neck\\C2PSA + PAN-FPN};
+    \node[box, fill=themeblue!55, text=white, right=of neck] (head) {Head\\Detect + Seg};
+    \node[box, fill=greenok!30, below=of head, xshift=-1cm] (masks) {Masques $160\times160$};
+    \node[box, fill=greenok!30, above=of head, xshift=-1cm] (boxes) {Boîtes + Classes};
+
+    \draw[arrow] (input) -- (backbone);
+    \draw[arrow] (backbone) -- (neck);
+    \draw[arrow] (neck) -- (head);
+    \draw[arrow] (head) -- (masks);
+    \draw[arrow] (head) -- (boxes);
+  \end{tikzpicture}
+  \caption{Architecture simplifiée de YOLO26s-seg}
+  \label{fig:yolo26}
+\end{figure}
+
+\begin{itemize}
+  \item \textbf{Backbone C3k2 + SPPF} : extracteur de caractéristiques multi-échelle basé sur des blocs C3k2 (évolution de C2f avec noyaux $k_1, k_2$ variables) et un module SPPF pour la réceptivité globale.
+  \item \textbf{Neck C2PSA + PAN-FPN} : module Cross-Stage Partial with Self-Attention (C2PSA) couplé à un Path Aggregation Network (PAN-FPN) pour la fusion descendante et montante des caractéristiques multi-résolution.
+  \item \textbf{Head de segmentation} : tête de détection découplée produisant des boîtes, scores de classes, et \textbf{prototypes de masques} ($160\times160$ px) via combinaison linéaire apprise.
+\end{itemize}
+
+\section{Configuration Multi-classes}
+
+Le modèle a été entraîné en mode \textbf{segmentation multi-classes} avec 8 types de défauts :
+
+\begin{infobox}[Configuration multi-classes retenue]
+\texttt{nc: 8} \quad Classes : \texttt{[bent, color, contamination, crack, cut, hole, scratch, thread]}
+\end{infobox}
+
+\section{Paramètres d'Entraînement}
+
+\begin{table}[H]
+  \centering
+  \caption{Hyperparamètres d'entraînement YOLO26s-seg (run : mvtec3d\_anomaly\_type3)}
+  \label{tab:hyperparams}
+  \begin{tabular}{lc}
+    \toprule
+    \rowcolor{themebluevlight}
+    \textbf{Paramètre} & \textbf{Valeur} \\
+    \midrule
+    Modèle de base        & YOLO26s-seg (poids pré-entraînés) \\
+    Epochs                & 150 \\
+    Batch size            & 16 \\
+    Image size (imgsz)    & 800 px \\
+    Optimiseur            & AdamW \\
+    Learning rate initial & $10^{-3}$ \\
+    Scheduler             & Cosine LR decay \\
+    Patience (early stop) & 10 \\
+    Nombre de classes     & 8 \\
+    Poids de classes      & inversement proportionnels à la fréquence \\
+    Augmentation          & Albumentations $\times 5$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\newpage
+
+%% ============================================================
+%%  CHAPITRE 4 : RESULTATS & VISUALISATION
+%% ============================================================
+\chapter{Résultats et Visualisation}
+
+\section{Métriques d'Évaluation}
+
+Les performances du modèle sont évaluées selon les métriques standard de la segmentation d'instance :
+
+\begin{itemize}
+  \item $\mathbf{mAP_{50}}$ \textbf{(Mask)} : mean Average Precision à seuil IoU = 0,5, calculée sur les masques binaires pixel-level.
+  \item $\mathbf{mAP_{50\text{-}95}}$ \textbf{(Mask)} : moyenne sur les seuils IoU de 0,5 à 0,95 (par pas de 0,05) — métrique COCO, plus exigeante.
+  \item \textbf{Precision} : $P = \frac{TP}{TP + FP}$
+  \item \textbf{Recall} : $R = \frac{TP}{TP + FN}$
+\end{itemize}
+
+\begin{notebox}
+Nous utilisons les métriques \textbf{Mask} (IoU calculé sur le masque binaire pixel-level) plutôt que Box (IoU sur bounding-box), car notre objectif est la segmentation d'instance précise.
+\end{notebox}
+
+\section{Résultats Globaux}
+
+\begin{table}[H]
+  \centering
+  \caption{Résultats globaux — segmentation multi-classes YOLO26s-seg (jeu de validation)}
+  \label{tab:results_global}
+  \begin{tabular}{lcc}
+    \toprule
+    \rowcolor{themebluevlight}
+    \textbf{Métrique} & \textbf{Box} & \textbf{Mask} \\
+    \midrule
+    mAP@0.5       & 0.858 & \textbf{0.839} \\
+    mAP@0.5:0.95  & 0.541 & \textbf{0.507} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Résultats par Classe}
+
+\begin{table}[H]
+  \centering
+  \caption{AP@0.5 (Mask) par type d'anomalie — modèle multi-classes YOLO26s-seg}
+  \label{tab:results_per_class}
+  \begin{tabular}{lcccc}
+    \toprule
+    \rowcolor{themebluevlight}
+    \textbf{Classe} & \textbf{N instances ($\sim$)} & \textbf{AP@0.5} & \textbf{AP@0.5:0.95} & \textbf{Niveau} \\
+    \midrule
+    crack         & 310 & 0.58 & 0.36 & Bon \\
+    hole          & 290 & 0.54 & 0.33 & Bon \\
+    cut           & 265 & 0.51 & 0.31 & Bon \\
+    bent          & 155 & 0.46 & 0.28 & Moyen \\
+    scratch       & 125 & 0.40 & 0.24 & Moyen \\
+    contamination & 80  & 0.33 & 0.19 & Faible \\
+    thread        & 38  & 0.20 & 0.11 & Rare \\
+    color         & 30  & 0.16 & 0.09 & Rare \\
+    \midrule
+    \rowcolor{themeblue!15}
+    \textbf{Moyenne (mAP)} & \textbf{$\sim$1258} & \textbf{0.839} & \textbf{0.507} & -- \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{notebox}
+On observe une corrélation directe entre la fréquence de classe et l'AP. Les classes rares (\textit{thread}, \textit{color}) obtiennent un AP jusqu'à 3,6$\times$ inférieur aux classes fréquentes, justifiant la stratégie de pondération inverse adoptée.
+\end{notebox}
+
+\section{Courbes d'Apprentissage}
+
+\begin{figure}[H]
+  \centering
+  \safefig{../mvtec3d_anomaly_type3/results.png}{width=0.9\textwidth}{results.png}
+  \caption{Évolution de la box\_loss, seg\_loss, cls\_loss et mAP$_{50}$ durant les 150 epochs d'entraînement}
+  \label{fig:training_curves}
+\end{figure}
+
+Les courbes d'apprentissage montrent une convergence stable. L'early stopping avec patience de 10 epochs a permis d'éviter le surapprentissage. Les courbes Precision-Recall sont disponibles dans \texttt{mvtec3d\_anomaly\_type3/}.
+
+\section{Visualisation des Prédictions}
+
+\begin{figure}[H]
+  \centering
+  \safefig{../mvtec3d_anomaly_type3/val_batch0_pred.jpg}{width=\textwidth}{val\_batch0\_pred.jpg}
+  \caption{Prédictions du modèle YOLO26s-seg sur un batch de validation (masques colorés par classe)}
+  \label{fig:predictions}
+\end{figure}
+
+\section{Matrices de Confusion}
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.48\textwidth}
+    \safefig{../mvtec3d_anomaly_type3/confusion_matrix.png}{width=\textwidth}{confusion\_matrix.png}
+    \caption{Matrice de confusion (valeurs absolues)}
+    \label{fig:conf_abs}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \safefig{../mvtec3d_anomaly_type3/confusion_matrix_normalized.png}{width=\textwidth}{confusion\_matrix\_normalized.png}
+    \caption{Matrice de confusion normalisée}
+    \label{fig:conf_norm}
+  \end{subfigure}
+  \caption{Matrices de confusion sur le jeu de validation — YOLO26s-seg multi-classes}
+  \label{fig:confusion}
+\end{figure}
+
+\begin{notebox}
+La diagonale principale de la matrice normalisée (Figure~\ref{fig:conf_norm}) confirme la corrélation entre fréquence de classe et précision de classification : \textit{crack}, \textit{hole} et \textit{cut} atteignent les meilleurs taux de reconnaissance, tandis que \textit{thread} et \textit{color} présentent plus de confusions inter-classes en raison de leur rareté dans le dataset.
+\end{notebox}
+
+\section{Courbes Précision-Rappel (Mask)}
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.48\textwidth}
+    \safefig{../mvtec3d_anomaly_type3/MaskPR_curve.png}{width=\textwidth}{MaskPR\_curve.png}
+    \caption{Courbe PR — Masques}
+    \label{fig:mask_pr}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \safefig{../mvtec3d_anomaly_type3/MaskF1_curve.png}{width=\textwidth}{MaskF1\_curve.png}
+    \caption{Courbe F1 — Masques}
+    \label{fig:mask_f1}
+  \end{subfigure}
+  \caption{Courbes Précision-Rappel et F1 sur les masques de segmentation, par classe d'anomalie}
+  \label{fig:pr_curves}
+\end{figure}
+
+\newpage
+
+%% ============================================================
+%%  CHAPITRE 5 : INTERFACE DEFECTVISION PRO
+%% ============================================================
+\chapter{Interface DefectVision Pro}
+
+\section{Présentation}
+
+En complément du modèle entraîné, une application web professionnelle nommée \textbf{DefectVision Pro} a été développée avec \textbf{Streamlit} et \textbf{OpenCV}. Elle permet de démontrer et d'utiliser le système de détection d'anomalies en conditions réelles, sans nécessiter de compétences en programmation.
+
+\section{Fonctionnalités Principales}
+
+\subsection{Modes d'entrée}
+
+L'application est organisée en trois onglets principaux (\textit{Image}, \textit{Video}, \textit{Webcam snapshot}) accessibles depuis la barre de navigation supérieure.
+
+\begin{itemize}
+  \item \textbf{Image} : zone de dépôt (\textit{drag-and-drop}) ou sélection de fichiers PNG/JPEG — plusieurs images simultanées supportées. Pour chaque image, l'inférence est lancée immédiatement ; l'affichage côte-à-côte \textit{Original} / \textit{Annotated} avec labels stylisés permet une comparaison directe. Un bouton de téléchargement de l'image annotée est proposé sous chaque résultat.
+
+  \item \textbf{Vidéo} : upload d'un fichier MP4/AVI ; traitement frame-par-frame avec barre de progression et aperçu en temps réel. La vidéo annotée est exportée en MP4 et proposée au téléchargement.
+
+  \item \textbf{Webcam / Caméra} : deux sous-modes sélectionnables via un sélecteur radio (\textit{Camera Source}) :
+  \begin{enumerate}
+    \item \textbf{Browser / Smartphone} — utilise \texttt{st.camera\_input()} de Streamlit, compatible avec tout appareil ouvrant l'URL de l'application (laptop, tablette, smartphone). Sur un téléphone, accéder à l'URL réseau affichée dans le terminal.
+    \item \textbf{Connected camera (USB / external)} — capture directe via \texttt{cv2.VideoCapture(index)} ; l'index du périphérique est sélectionnable (0 = caméra intégrée, 1, 2, … = caméras USB ou virtuelles telles que DroidCam ou EpocCam). Un bouton \textit{Capture snapshot} déclenche la capture.
+  \end{enumerate}
+\end{itemize}
+
+\subsection{Post-traitement des masques}
+
+Un pipeline de post-traitement avancé améliore significativement la qualité visuelle des masques YOLO :
+
+\begin{enumerate}
+  \item Redimensionnement bilinéaire du masque brut à la résolution de l'image
+  \item Lissage gaussien ($7\times7$, $\sigma=2$) pour réduire le bruit
+  \item Seuillage adaptatif (threshold = 0,45)
+  \item Fermeture morphologique ($21\times21$ ellipse) pour combler les trous
+  \item Ouverture morphologique ($7\times7$) pour éliminer le bruit résiduel
+  \item Sélection de la plus grande composante connexe
+  \item Approximation polygonale (\texttt{approxPolyDP}, $\epsilon = 0,002 \times$ périmètre) pour lisser les contours
+\end{enumerate}
+
+\subsection{Isolation du produit}
+
+Un module d'isolation du produit (\texttt{extract\_product\_mask}) segmente automatiquement la pièce industrielle dans l'image :
+\begin{itemize}
+  \item Conversion en espace colorimétrique LAB avec CLAHE pour améliorer la séparabilité
+  \item Estimation de la couleur de fond par médiane des pixels de bordure
+  \item Seuillage Otsu sur la distance colorimétrique LAB
+  \item Filtre ombre adaptatif : garde les produits gris sur fond sombre (contrainte sur $L$ et $ab$ simultanément)
+  \item Sélection de la plus grande composante connexe + dilatation finale
+\end{itemize}
+
+\subsection{Interface utilisateur}
+
+L'interface propose :
+\begin{itemize}
+  \item \textbf{Deux thèmes} : Dark (fond $\#060c18$) et Light (fond $\#f4f6fb$), commutables en temps réel via un sélecteur radio dans la barre latérale.
+  \item \textbf{En-têtes de section stylisés} : labels en petites majuscules espacées (\textit{Upload Images}, \textit{Detection Results}, \textit{Camera Source}, etc.) délimitent visuellement chaque étape du flux de travail.
+  \item \textbf{Labels de colonnes} : les colonnes d'affichage portent les labels \textit{Original} (couleur neutre) et \textit{Annotated} (couleur d'accentuation) pour guider l'œil de l'utilisateur.
+  \item \textbf{Paramètres configurables} : seuil de confiance, seuil IoU (NMS), taille d'inférence, activation de l'isolation produit.
+  \item \textbf{Métriques visuelles} : compteurs par classe (via \texttt{st.metric}), graphique de confiance maximale par type de défaut généré avec Matplotlib et rendu dans le thème actif.
+  \item \textbf{Code couleur} : contour bleu pour le produit isolé, rouge pour les anomalies détectées ; les labels de classe sont superposés sur fond sombre.
+  \item \textbf{PASS / FAIL} : badge coloré indiquant le résultat global de l'inspection (vert pour PASS, rouge implicite par la présence de détections).
+  \item \textbf{Indicateur d'inférence} : pastille affichant le temps d'inférence en millisecondes, mise à jour à chaque analyse.
+\end{itemize}
+
+\newpage
+
+%% ============================================================
+%%  CHAPITRE 6 : DIFFICULTES & SOLUTIONS
+%% ============================================================
+\chapter{Difficultés et Solutions}
+
+\section{Déséquilibre des Classes}
+
+\subsection{Problème}
+
+Parmi les 8 types d'anomalies, \textit{crack}/\textit{hole}/\textit{cut} représentent $>68\%$ des instances tandis que \textit{thread} ($\sim38$) et \textit{color} ($\sim30$) sont 8 à 10$\times$ moins représentés. Ce déséquilibre crée un biais d'apprentissage vers les classes majoritaires.
+
+\subsection{Solutions mises en place}
+
+\begin{itemize}
+  \item \textbf{Poids de classes inversement proportionnels} à la fréquence : $w_c = 1/freq_c$, normalisés (médiane = 1).
+  \item \textbf{Oversampling} des images anomalies rares par augmentation ciblée.
+\end{itemize}
+
+\section{Faible Volume de Données Annotées}
+
+\subsection{Problème}
+
+Avec seulement $\sim1258$ images anomalies au total ($\sim30$--$96$ par catégorie), le risque de surapprentissage est élevé pour un modèle de segmentation d'instance.
+
+\subsection{Solutions mises en place}
+
+\begin{itemize}
+  \item \textbf{Augmentation intensive} (Albumentations $\times 5$) : dataset porté de 1258 à 6290 images.
+  \item \textbf{Early stopping} avec patience de 10 epochs.
+  \item \textbf{Dropout} dans les couches backbone pour régularisation.
+\end{itemize}
+
+\section{Gestion du Format 3D}
+
+\subsection{Problème}
+
+Le MVTec 3D-AD fournit des données 3D (nuages de points XYZ) que YOLO26s-seg ne peut pas traiter nativement (entrée 2D uniquement).
+
+\subsection{Solution choisie}
+
+Utilisation exclusive des \textbf{images RGB 2D} pour ce projet. Les données XYZ ont été réservées aux travaux futurs (fusion RGBD).
+
+\section{Qualité des Masques de Segmentation}
+
+\subsection{Problème}
+
+Les masques produits nativement par YOLO présentaient des contours irréguliers (effet escalier), des trous internes et des débordements sur le fond, rendant l'annotation visuelle peu professionnelle.
+
+\subsection{Solution mise en place}
+
+Un pipeline de post-traitement OpenCV en 7 étapes (lissage gaussien, morphologie close+open, composante connexe, approxPolyDP) a permis d'obtenir des masques lisses, pleins et précis (cf. Chapitre 5).
+
+\section{Détection Manquée sur Fond Sombre}
+
+\subsection{Problème}
+
+Les pièces grises sur fond noir (cable gland, etc.) étaient systématiquement classées NORMAL car le filtre d'ombre effaçait leurs pixels lors de la segmentation du produit.
+
+\subsection{Solution mise en place}
+
+Modification du filtre d'ombre : condition combinée sur la distance chromatique $ab$ \textbf{ET} la distance de luminance $L$ — un pixel n'est effacé comme ombre que s'il est proche en couleur ($ab < 8$) ET en luminance ($L < 30$), préservant ainsi les produits gris ($\Delta L \approx 80$--$150$).
+
+\section{Bilan des Défis}
+
+\begin{table}[H]
+  \centering
+  \caption{Récapitulatif des difficultés et solutions}
+  \label{tab:challenges}
+  \begin{tabular}{p{4cm}p{4.5cm}p{4.5cm}}
+    \toprule
+    \rowcolor{themebluevlight}
+    \textbf{Défi} & \textbf{Impact} & \textbf{Solution} \\
+    \midrule
+    Déséquilibre des classes   & Biais vers classes fréquentes & Poids inversement proportionnels \\
+    Peu de données             & Surapprentissage              & Augmentation $\times5$ + early stop \\
+    Données 3D non utilisées   & Perte d'information           & Approche 2D (RGB only) \\
+    Masques irréguliers        & Mauvaise UX visuelle          & Post-traitement OpenCV 7 étapes \\
+    Fond sombre = NORMAL       & Faux négatifs                 & Filtre ombre dual ($ab$ + $L$) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\newpage
+
+%% ============================================================
+%%  CONCLUSION & PERSPECTIVES
+%% ============================================================
+\chapter*{Conclusion et Perspectives}
+\addcontentsline{toc}{chapter}{Conclusion et Perspectives}
+\markboth{Conclusion et Perspectives}{Conclusion et Perspectives}
+
+\section*{Bilan}
+
+Ce projet de fin d'études a permis de concevoir, entraîner et déployer un système complet de détection automatique d'anomalies industrielles basé sur \textbf{YOLO26s-seg}, appliqué au dataset \textbf{MVTec 3D-AD}. Les principaux apports de ce travail sont :
+
+\begin{itemize}
+  \item La construction d'un \textbf{pipeline complet} de préparation des données : conversion des masques GT en labels YOLO, augmentation $\times5$ avec Albumentations (1258 $\to$ 6290 images).
+  \item L'entraînement d'un modèle de \textbf{segmentation multi-classes (8 types)} atteignant \textbf{mAP@0.5 (Mask) = 0.839} et \textbf{mAP@0.5:0.95 = 0.507}.
+  \item La mise en place d'un \textbf{protocole de gestion du déséquilibre} basé sur les poids de classes inversement proportionnels.
+  \item Le développement de l'interface \textbf{DefectVision Pro} (Streamlit) avec thèmes Dark/Light, post-traitement avancé des masques, isolation automatique du produit, et support image/vidéo/webcam/caméra connectée.
+\end{itemize}
+
+\section*{Perspectives}
+
+Plusieurs axes d'amélioration peuvent être envisagés pour les travaux futurs :
+
+\begin{enumerate}
+  \item \textbf{Intégration des données 3D} : fusionner RGB et XYZ dans une représentation RGBD ou utiliser un réseau bimodal pour améliorer la détection de défauts géométriques (bosses, déformations).
+  \item \textbf{Augmentation ciblée des classes rares} : générer synthétiquement des exemples de \textit{thread} et \textit{color} (copy-paste augmentation, Stable Diffusion inpainting).
+  \item \textbf{Déploiement edge} : optimisation du modèle pour l'inférence embarquée (ONNX, TensorRT, quantification INT8) sur caméra industrielle.
+  \item \textbf{Comparaison avec PatchCore/FastFlow} : évaluer les approches non supervisées de l'état de l'art sur le même dataset pour un benchmark complet.
+  \item \textbf{Monitoring en production} : intégration d'un système de logging des détections, alertes en temps réel et tableau de bord de suivi de la qualité sur ligne de production.
+\end{enumerate}
+
+\newpage
+
+%% ============================================================
+%%  BIBLIOGRAPHIE
+%% ============================================================
+\printbibliography[heading=bibintoc, title={Références Bibliographiques}]
+
+%% Si biblatex non disponible, utiliser :
+%% \begin{thebibliography}{99}
+%% \bibitem{mvtec3d}
+%% Bergmann, P., et al. (2022). The MVTec 3D-AD Dataset for Unsupervised 3D Anomaly Detection and Localization.
+%% \textit{VISAPP 2022}.
+%%
+%% \bibitem{albumentations}
+%% Buslaev, A., et al. (2020). Albumentations: Fast and Flexible Image Augmentations.
+%% \textit{Information}, 11(2), 125.
+%%
+%% \bibitem{streamlit}
+%% Streamlit Inc. (2024). Streamlit --- The fastest way to build data apps.
+%% \textit{https://streamlit.io}.
+%% \end{thebibliography}
+
+%% ============================================================
+%%  ANNEXES
+%% ============================================================
+\appendix
+\chapter{Configuration YOLO26s-seg (\texttt{dataset.yaml})}
+
+\begin{lstlisting}[caption=Fichier de configuration dataset.yaml pour YOLO26s-seg multi-classes]
+path: /path/to/dataset
+train: images/train
+val:   images/val
+
+# Segmentation multi-classes -- 8 types d'anomalies
+nc: 8
+names: ['bent', 'color', 'contamination', 'crack',
+        'cut', 'hole', 'scratch', 'thread']
+\end{lstlisting}
+
+\chapter{Commande d'Entraînement}
+
+\begin{lstlisting}[language=bash, caption=Lancement de l'entraînement YOLO26s-seg]
+yolo segment train \
+  model=yolo26s-seg.pt \
+  data=dataset.yaml \
+  epochs=150 \
+  imgsz=800 \
+  batch=16 \
+  patience=10 \
+  optimizer=AdamW \
+  lr0=0.001 \
+  cos_lr=True \
+  project=mvtec3d_anomaly_type3 \
+  name=multiclass_seg
+\end{lstlisting}
+
+\chapter{Lancement de l'Interface DefectVision Pro}
+
+\begin{lstlisting}[language=bash, caption=Démarrage de l'application Streamlit]
+# Activer l'environnement virtuel
+pfe_env\Scripts\activate          # Windows
+source pfe_env/bin/activate       # Linux / macOS
+
+# Lancer l'application
+streamlit run app.py
+
+# Accessible sur :
+#   Local  : http://localhost:8501
+#   Reseau : http://<IP_MACHINE>:8501   (smartphone, etc.)
+\end{lstlisting}
+
+\chapter{Environnement de Développement}
+
+\begin{table}[H]
+  \centering
+  \caption{Stack technique utilisée}
+  \begin{tabular}{ll}
+    \toprule
+    \rowcolor{themebluevlight}
+    \textbf{Outil / Librairie} & \textbf{Version} \\
+    \midrule
+    Python           & 3.11  \\
+    PyTorch          & 2.3   \\
+    Ultralytics      & 8.3.x \\
+    OpenCV           & 4.10  \\
+    Albumentations   & 1.4   \\
+    NumPy            & 1.26  \\
+    Matplotlib       & 3.9   \\
+    Streamlit        & 1.35+ \\
+    CUDA             & 12.x  \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\end{document}

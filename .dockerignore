@@ -6,7 +6,13 @@ __pycache__/
 data/
 notebooks/
 experiments/
-resultats/
-output.mp4
-test_video*.mp4
 docs/
+scripts/
+tests/
+web/node_modules/
+web/.next/
+minio_data/
+mlflow_data/
+*.pt
+*.mp4
+*.csv

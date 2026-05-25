@@ -13,7 +13,7 @@ import { useHistory } from "@/hooks/useHistory"
 type Tab = "image" | "video" | "camera"
 
 const DEFAULTS: ModelConfig = {
-  weights: "best_m.pt",
+  weights: "weights/best_m.pt",
   conf: 0.25,
   iou: 0.45,
   imgsz: 800,
@@ -82,7 +82,7 @@ export default function Page() {
     apiHealth()
       .then((h) => { setStatus("ok"); setDevice(h.device.toUpperCase()) })
       .catch(() => setStatus("error"))
-    apiModels().then(setModels).catch(() => {})
+    apiModels().then((ms) => { setModels(ms); if (ms.length > 0) set({ weights: ms[0] }) }).catch(() => {})
   }, [])
 
   const set = useCallback((p: Partial<ModelConfig>) => setCfg((c) => ({ ...c, ...p })), [])

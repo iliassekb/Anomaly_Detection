@@ -1,0 +1,2012 @@
+﻿%% ============================================================
+%%  Presentation - Detection d'Anomalies Industrielles 3D
+%%  Theme : Elegant bleu clair avec blobs degrade (style UVT)
+%%  Compatible Overleaf - compilez avec pdfLaTeX
+%% ============================================================
+
+\documentclass[aspectratio=169, 10pt]{beamer}
+
+%% ---------- Packages ----------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{lmodern}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{colortbl}
+\usepackage{fontawesome5}
+\usepackage{amsmath}
+\usepackage{multirow}
+\usepackage{textcomp}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning,
+                fit, backgrounds, calc}
+
+%% ---------- Couleurs ----------
+\definecolor{themeblue}{RGB}{70, 130, 195}
+\definecolor{themebluedark}{RGB}{35, 80, 145}
+\definecolor{themebluelight}{RGB}{140, 190, 235}
+\definecolor{themebluevlight}{RGB}{210, 230, 248}
+\definecolor{blobcolor}{RGB}{100, 160, 220}
+\definecolor{textdark}{RGB}{30, 45, 70}
+\definecolor{textmid}{RGB}{80, 100, 130}
+\definecolor{textlight}{RGB}{130, 155, 185}
+\definecolor{greenok}{RGB}{39, 174, 96}
+\definecolor{orangewip}{RGB}{230, 126, 34}
+\definecolor{reddanger}{RGB}{192, 57, 43}
+\definecolor{lightbg}{RGB}{245, 249, 253}
+
+%% ---------- Theme de base ----------
+\usetheme{default}
+\usecolortheme{default}
+\setbeamertemplate{navigation symbols}{}
+
+%% Couleurs globales
+\setbeamercolor{background canvas}{bg=white}
+\setbeamercolor{normal text}{fg=textdark}
+\setbeamercolor{frametitle}{fg=themebluedark}
+\setbeamercolor{item}{fg=themeblue}
+\setbeamercolor{subitem}{fg=themebluelight}
+\setbeamercolor{block title}{bg=themeblue, fg=white}
+\setbeamercolor{block body}{bg=themebluevlight, fg=textdark}
+
+%% Police sans-serif
+\usefonttheme{professionalfonts}
+\setbeamerfont{frametitle}{size=\large, series=\bfseries}
+
+%% ---------- HEADER/FOOTER ----------
+\setbeamertemplate{frametitle}{%
+  \begin{tikzpicture}[remember picture, overlay]
+    \draw[themeblue!40, line width=0.4pt]
+      ([xshift=0.6cm, yshift=-1.05cm]current page.north west)
+      -- ([xshift=-0.6cm, yshift=-1.05cm]current page.north east);
+    \node[anchor=west, text=themebluedark, font=\large\bfseries]
+      at ([xshift=0.7cm, yshift=-0.55cm]current page.north west)
+      {\insertframetitle};
+  \end{tikzpicture}
+}
+
+\setbeamertemplate{footline}{%
+  \begin{tikzpicture}[remember picture, overlay]
+    \draw[themeblue!25, line width=0.4pt]
+      ([xshift=0.6cm, yshift=0.42cm]current page.south west)
+      -- ([xshift=-0.6cm, yshift=0.42cm]current page.south east);
+    \node[anchor=west, text=textlight, font=\tiny]
+      at ([xshift=0.7cm, yshift=0.22cm]current page.south west)
+      {Imad Sanoussi\ \textbullet\ D\'etection d'Anomalies Industrielles -- YOLO26s-seg\ \textbullet\ FSAC 2025--2026};
+    \fill[themeblue] ([xshift=-0.5cm, yshift=0.15cm]current page.south east) circle (0.18cm);
+    \node[text=white, font=\tiny\bfseries]
+      at ([xshift=-0.5cm, yshift=0.15cm]current page.south east)
+      {\insertframenumber};
+  \end{tikzpicture}
+}
+
+%% Itemize style
+\setbeamertemplate{itemize item}{%
+  \tikz[baseline=-0.6ex]{\fill[themeblue] (0,0) circle (0.28ex);}%
+}
+
+%% ============================================================
+\title{}
+\date{}
+\begin{document}
+%% ============================================================
+
+%% ============================================================
+%%  SLIDE 1 - TITRE
+%% ============================================================
+{
+\setbeamertemplate{footline}{}
+\setbeamertemplate{frametitle}{}
+\begin{frame}[plain]
+\begin{tikzpicture}[remember picture, overlay]
+
+  \fill[white] (current page.south west) rectangle (current page.north east);
+
+  %% Blobs decoratifs
+  \begin{scope}
+    \foreach \r/\op in {3.8/0.10, 3.2/0.14, 2.6/0.18, 2.0/0.22, 1.4/0.18, 0.8/0.12}{
+      \fill[blobcolor, opacity=\op]
+        ([xshift=1.2cm, yshift=-1.0cm]current page.north east) circle (\r cm);
+    }
+  \end{scope}
+  \begin{scope}
+    \foreach \r/\op in {2.0/0.08, 1.5/0.11, 1.0/0.14}{
+      \fill[blobcolor, opacity=\op]
+        ([xshift=-0.5cm, yshift=-3.5cm]current page.north east) circle (\r cm);
+    }
+  \end{scope}
+  \begin{scope}
+    \foreach \r/\op in {2.5/0.08, 1.8/0.12, 1.2/0.15}{
+      \fill[blobcolor, opacity=\op]
+        ([xshift=1.0cm, yshift=1.0cm]current page.south west) circle (\r cm);
+    }
+  \end{scope}
+
+  %% Badge PFE
+  \fill[themeblue] ([xshift=0.5cm, yshift=-0.35cm]current page.north west)
+    rectangle ([xshift=2.6cm, yshift=-0.72cm]current page.north west);
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=1.55cm, yshift=-0.535cm]current page.north west)
+    {PFE 2025 -- 2026};
+
+  %% Ligne decorative bleue
+  \draw[themeblue!60, line width=1.5pt]
+    ([xshift=0.7cm, yshift=0.3cm]current page.west)
+    -- ([xshift=0.7cm, yshift=-3.5cm]current page.west);
+  \draw[themebluelight!60, line width=0.5pt]
+    ([xshift=0.85cm, yshift=0.3cm]current page.west)
+    -- ([xshift=0.85cm, yshift=-3.5cm]current page.west);
+
+  %% Titre
+  \node[anchor=west, text=themebluedark, font=\fontsize{22}{27}\bfseries,
+        align=left, text width=14cm]
+    at ([xshift=1.1cm, yshift=1.5cm]current page.west)
+    {D\'etection d'Anomalies Industrielles\\par Deep Learning};
+
+  %% Sous-titre
+  \node[anchor=west, text=themeblue, font=\normalsize\itshape]
+    at ([xshift=1.1cm, yshift=0.1cm]current page.west)
+    {YOLO26s Instance Segmentation \textbullet\ MVTec 3D-AD Dataset};
+
+  %% Separateur
+  \draw[themeblue!40, line width=0.7pt]
+    ([xshift=1.1cm, yshift=-0.25cm]current page.west)
+    -- ([xshift=9cm, yshift=-0.25cm]current page.west);
+
+  %% Infos auteur
+  \node[anchor=west, text=textmid, font=\small\bfseries]
+    at ([xshift=1.1cm, yshift=-0.70cm]current page.west) {R\'ealis\'e par :};
+  \node[anchor=west, text=textdark, font=\small]
+    at ([xshift=3.5cm, yshift=-0.70cm]current page.west) {Imad Sanoussi};
+
+  \node[anchor=west, text=textmid, font=\small\bfseries]
+    at ([xshift=1.1cm, yshift=-1.10cm]current page.west) {Encadrant :};
+  \node[anchor=west, text=textdark, font=\small]
+    at ([xshift=3.5cm, yshift=-1.10cm]current page.west) {M. Hamza Mouncif};
+
+  \node[anchor=west, text=textmid, font=\small\bfseries]
+    at ([xshift=1.1cm, yshift=-1.50cm]current page.west) {Formation :};
+  \node[anchor=west, text=textdark, font=\small]
+    at ([xshift=3.5cm, yshift=-1.50cm]current page.west) {Master Data Science -- FSAC};
+
+  \node[anchor=west, text=textmid, font=\small\bfseries]
+    at ([xshift=1.1cm, yshift=-1.90cm]current page.west) {Ann\'ee :};
+  \node[anchor=west, text=textdark, font=\small]
+    at ([xshift=3.5cm, yshift=-1.90cm]current page.west) {2025 -- 2026};
+
+\end{tikzpicture}
+\end{frame}
+}
+
+%% ============================================================
+%%  SLIDE 2 - PLAN / SOMMAIRE
+%% ============================================================
+{
+\setbeamertemplate{footline}{}
+\setbeamertemplate{frametitle}{}
+\begin{frame}[plain]
+\begin{tikzpicture}[remember picture, overlay]
+
+  \fill[white] (current page.south west) rectangle (current page.north east);
+
+  \begin{scope}
+    \foreach \r/\op in {3.5/0.09, 2.8/0.12, 2.0/0.15, 1.2/0.12}{
+      \fill[blobcolor, opacity=\op]
+        ([xshift=0.8cm, yshift=-0.5cm]current page.north east) circle (\r cm);
+    }
+  \end{scope}
+
+  \node[anchor=west, text=themebluedark, font=\LARGE\bfseries]
+    at ([xshift=0.7cm, yshift=-0.55cm]current page.north west) {Plan};
+  \draw[themeblue!50, line width=0.6pt]
+    ([xshift=0.7cm, yshift=-0.90cm]current page.north west)
+    -- ([xshift=3.5cm, yshift=-0.90cm]current page.north west);
+
+  %% 8 items - 2 colonnes
+  %% Colonne gauche (01-04)
+  \node[text=themebluelight, font=\fontsize{14}{14}\bfseries, opacity=0.7]
+    at ([xshift=1.4cm, yshift=3.0cm]current page.west) {01};
+  \node[anchor=west, text=themebluedark, font=\small\bfseries]
+    at ([xshift=2.2cm, yshift=3.15cm]current page.west) {Contexte \& Probl\'ematique};
+  \node[anchor=west, text=textmid, font=\tiny\itshape]
+    at ([xshift=2.2cm, yshift=2.82cm]current page.west) {Contr\^ole qualit\'e industriel, d\'etection automatique};
+  \draw[themeblue!15, line width=0.3pt]
+    ([xshift=2.2cm, yshift=2.55cm]current page.west) -- ([xshift=7.4cm, yshift=2.55cm]current page.west);
+
+  \node[text=themebluelight, font=\fontsize{14}{14}\bfseries, opacity=0.7]
+    at ([xshift=1.4cm, yshift=2.0cm]current page.west) {02};
+  \node[anchor=west, text=themebluedark, font=\small\bfseries]
+    at ([xshift=2.2cm, yshift=2.15cm]current page.west) {Dataset MVTec 3D-AD};
+  \node[anchor=west, text=textmid, font=\tiny\itshape]
+    at ([xshift=2.2cm, yshift=1.82cm]current page.west) {Types de donn\'ees, anomalies par cat\'egorie, distribution};
+  \draw[themeblue!15, line width=0.3pt]
+    ([xshift=2.2cm, yshift=1.55cm]current page.west) -- ([xshift=7.4cm, yshift=1.55cm]current page.west);
+
+  \node[text=themebluelight, font=\fontsize{14}{14}\bfseries, opacity=0.7]
+    at ([xshift=1.4cm, yshift=1.0cm]current page.west) {03};
+  \node[anchor=west, text=themebluedark, font=\small\bfseries]
+    at ([xshift=2.2cm, yshift=1.15cm]current page.west) {Pipeline de Projet};
+  \node[anchor=west, text=textmid, font=\tiny\itshape]
+    at ([xshift=2.2cm, yshift=0.82cm]current page.west) {EDA $\to$ labels YOLO $\to$ augmentation $\to$ train $\to$ \'eval};
+  \draw[themeblue!15, line width=0.3pt]
+    ([xshift=2.2cm, yshift=0.55cm]current page.west) -- ([xshift=7.4cm, yshift=0.55cm]current page.west);
+
+  \node[text=themebluelight, font=\fontsize{14}{14}\bfseries, opacity=0.7]
+    at ([xshift=1.4cm, yshift=0.0cm]current page.west) {04};
+  \node[anchor=west, text=themebluedark, font=\small\bfseries]
+    at ([xshift=2.2cm, yshift=0.15cm]current page.west) {Mod\`ele Choisi : YOLO26s-seg};
+  \node[anchor=west, text=textmid, font=\tiny\itshape]
+    at ([xshift=2.2cm, yshift=-0.18cm]current page.west) {Choix justifi\'e, architecture, hyperparamatres};
+  \draw[themeblue!15, line width=0.3pt]
+    ([xshift=2.2cm, yshift=-0.45cm]current page.west) -- ([xshift=7.4cm, yshift=-0.45cm]current page.west);
+
+  %% Colonne droite (05-08)
+  \node[text=themebluelight, font=\fontsize{14}{14}\bfseries, opacity=0.7]
+    at ([xshift=9.0cm, yshift=3.0cm]current page.west) {05};
+  \node[anchor=west, text=themebluedark, font=\small\bfseries]
+    at ([xshift=9.8cm, yshift=3.15cm]current page.west) {Architecture du Mod\`ele};
+  \node[anchor=west, text=textmid, font=\tiny\itshape]
+    at ([xshift=9.8cm, yshift=2.82cm]current page.west) {Backbone C3k2, Neck PAN-FPN, t\^ete de segmentation};
+  \draw[themeblue!15, line width=0.3pt]
+    ([xshift=9.8cm, yshift=2.55cm]current page.west) -- ([xshift=14.8cm, yshift=2.55cm]current page.west);
+
+  \node[text=themebluelight, font=\fontsize{14}{14}\bfseries, opacity=0.7]
+    at ([xshift=9.0cm, yshift=2.0cm]current page.west) {06};
+  \node[anchor=west, text=themebluedark, font=\small\bfseries]
+    at ([xshift=9.8cm, yshift=2.15cm]current page.west) {M\'etriques d'\'Evaluation};
+  \node[anchor=west, text=textmid, font=\tiny\itshape]
+    at ([xshift=9.8cm, yshift=1.82cm]current page.west) {D\'efinition et r\^ole : IoU, Precision, Recall, mAP};
+  \draw[themeblue!15, line width=0.3pt]
+    ([xshift=9.8cm, yshift=1.55cm]current page.west) -- ([xshift=14.8cm, yshift=1.55cm]current page.west);
+
+  \node[text=themebluelight, font=\fontsize{14}{14}\bfseries, opacity=0.7]
+    at ([xshift=9.0cm, yshift=1.0cm]current page.west) {07};
+  \node[anchor=west, text=themebluedark, font=\small\bfseries]
+    at ([xshift=9.8cm, yshift=1.15cm]current page.west) {R\'esultats par Classe};
+  \node[anchor=west, text=textmid, font=\tiny\itshape]
+    at ([xshift=9.8cm, yshift=0.82cm]current page.west) {AP par type d'anomalie, impact du d\'es\'equilibre};
+  \draw[themeblue!15, line width=0.3pt]
+    ([xshift=9.8cm, yshift=0.55cm]current page.west) -- ([xshift=14.8cm, yshift=0.55cm]current page.west);
+
+  \node[text=themebluelight, font=\fontsize{14}{14}\bfseries, opacity=0.7]
+    at ([xshift=9.0cm, yshift=0.0cm]current page.west) {08};
+  \node[anchor=west, text=themebluedark, font=\small\bfseries]
+    at ([xshift=9.8cm, yshift=0.15cm]current page.west) {Perspectives};
+  \node[anchor=west, text=textmid, font=\tiny\itshape]
+    at ([xshift=9.8cm, yshift=-0.18cm]current page.west) {Fusion RGB+XYZ, d\'eploiement edge, rapport final};
+
+  %% Pastille page
+  \fill[themeblue] ([xshift=-0.5cm, yshift=0.15cm]current page.south east) circle (0.18cm);
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=-0.5cm, yshift=0.15cm]current page.south east) {2};
+
+\end{tikzpicture}
+\end{frame}
+}
+
+%% ============================================================
+%%  SLIDE 3 - CONTEXTE & PROBLEMATIQUE
+%% ============================================================
+\begin{frame}{01 --- Contexte \& Probl\'ematique}
+\begin{tikzpicture}[remember picture, overlay]
+  \fill[white] (current page.south west) rectangle (current page.north east);
+
+  \begin{scope}
+    \foreach \r/\op in {3.2/0.08, 2.4/0.11, 1.6/0.13}{
+      \fill[blobcolor, opacity=\op]
+        ([xshift=0.9cm, yshift=-0.6cm]current page.north east) circle (\r cm);
+    }
+  \end{scope}
+  \node[text=themebluelight, font=\fontsize{52}{52}\bfseries, opacity=0.25]
+    at ([xshift=-1.2cm, yshift=-0.6cm]current page.north east) {01};
+
+  \draw[themeblue!40, line width=0.4pt]
+    ([xshift=0.6cm, yshift=-1.0cm]current page.north west)
+    -- ([xshift=-0.6cm, yshift=-1.0cm]current page.north east);
+
+  %% Titre slide
+  \node[anchor=west, text=themebluedark, font=\large\bfseries]
+    at ([xshift=0.7cm, yshift=-0.55cm]current page.north west)
+    {01 --- Contexte \& Probl\'ematique};
+
+  %% Colonne gauche - Probleme actuel
+  \fill[reddanger!8, rounded corners=5pt]
+    ([xshift=0.6cm, yshift=-1.3cm]current page.north west)
+    rectangle ([xshift=7.8cm, yshift=0.6cm]current page.south west);
+  \fill[reddanger!70, rounded corners=3pt]
+    ([xshift=0.6cm, yshift=-1.3cm]current page.north west)
+    rectangle ([xshift=7.8cm, yshift=-1.75cm]current page.north west);
+  \node[text=white, font=\small\bfseries]
+    at ([xshift=4.2cm, yshift=-1.525cm]current page.north west)
+    {Probl\`eme actuel};
+
+  \fill[reddanger!70, rounded corners=1pt]
+    ([xshift=0.85cm, yshift=-2.44cm]current page.north west)
+    rectangle ([xshift=1.12cm, yshift=-2.16cm]current page.north west);
+  \node[anchor=west, text=textdark, font=\scriptsize, text width=5.8cm]
+    at ([xshift=1.25cm, yshift=-2.30cm]current page.north west)
+    {Inspection manuelle lente : 1 op\'erateur par ligne de production};
+
+  \fill[reddanger!70, rounded corners=1pt]
+    ([xshift=0.85cm, yshift=-3.24cm]current page.north west)
+    rectangle ([xshift=1.12cm, yshift=-2.96cm]current page.north west);
+  \node[anchor=west, text=textdark, font=\scriptsize, text width=5.8cm]
+    at ([xshift=1.25cm, yshift=-3.10cm]current page.north west)
+    {Taux de faux n\'egatifs \'elev\'e pour les d\'efauts subtils};
+
+  \fill[reddanger!70, rounded corners=1pt]
+    ([xshift=0.85cm, yshift=-4.04cm]current page.north west)
+    rectangle ([xshift=1.12cm, yshift=-3.76cm]current page.north west);
+  \node[anchor=west, text=textdark, font=\scriptsize, text width=5.8cm]
+    at ([xshift=1.25cm, yshift=-3.90cm]current page.north west)
+    {Impossible \`a d\'eployer 24h/24 sans fatigue op\'erateur};
+
+  \fill[reddanger!70, rounded corners=1pt]
+    ([xshift=0.85cm, yshift=-4.84cm]current page.north west)
+    rectangle ([xshift=1.12cm, yshift=-4.56cm]current page.north west);
+  \node[anchor=west, text=textdark, font=\scriptsize, text width=5.8cm]
+    at ([xshift=1.25cm, yshift=-4.70cm]current page.north west)
+    {Co\^ut \'elev\'e des pi\`eces d\'efectueuses en production};
+
+  %% Colonne droite - Notre solution
+  \fill[greenok!8, rounded corners=5pt]
+    ([xshift=8.2cm, yshift=-1.3cm]current page.north west)
+    rectangle ([xshift=15.4cm, yshift=0.6cm]current page.south west);
+  \fill[greenok!70, rounded corners=3pt]
+    ([xshift=8.2cm, yshift=-1.3cm]current page.north west)
+    rectangle ([xshift=15.4cm, yshift=-1.75cm]current page.north west);
+  \node[text=white, font=\small\bfseries]
+    at ([xshift=11.8cm, yshift=-1.525cm]current page.north west)
+    {Notre solution};
+
+  \fill[greenok!70, rounded corners=1pt]
+    ([xshift=8.45cm, yshift=-2.44cm]current page.north west)
+    rectangle ([xshift=8.72cm, yshift=-2.16cm]current page.north west);
+  \node[anchor=west, text=textdark, font=\scriptsize, text width=5.8cm]
+    at ([xshift=8.85cm, yshift=-2.30cm]current page.north west)
+    {D\'etection automatique par instance segmentation YOLO26};
+
+  \fill[greenok!70, rounded corners=1pt]
+    ([xshift=8.45cm, yshift=-3.24cm]current page.north west)
+    rectangle ([xshift=8.72cm, yshift=-2.96cm]current page.north west);
+  \node[anchor=west, text=textdark, font=\scriptsize, text width=5.8cm]
+    at ([xshift=8.85cm, yshift=-3.10cm]current page.north west)
+    {Localisation pixel-level des anomalies sur 10 cat\'egories};
+
+  \fill[greenok!70, rounded corners=1pt]
+    ([xshift=8.45cm, yshift=-4.04cm]current page.north west)
+    rectangle ([xshift=8.72cm, yshift=-3.76cm]current page.north west);
+  \node[anchor=west, text=textdark, font=\scriptsize, text width=5.8cm]
+    at ([xshift=8.85cm, yshift=-3.90cm]current page.north west)
+    {Segmentation multi-classes : 8 types d'anomalies};
+
+  \fill[greenok!70, rounded corners=1pt]
+    ([xshift=8.45cm, yshift=-4.84cm]current page.north west)
+    rectangle ([xshift=8.72cm, yshift=-4.56cm]current page.north west);
+  \node[anchor=west, text=textdark, font=\scriptsize, text width=5.8cm]
+    at ([xshift=8.85cm, yshift=-4.70cm]current page.north west)
+    {Dataset MVTec 3D-AD : donn\'ees RGB + XYZ industrielles r\'eelles};
+
+\end{tikzpicture}
+\end{frame}
+
+%% ============================================================
+%%  SLIDE 3b - CATEGORIES MVTEC
+%% ============================================================
+\begin{frame}{02 --- MVTec 3D-AD : Cat\'egories \& D\'efauts}
+\begin{tikzpicture}[remember picture, overlay]
+  \fill[white] (current page.south west) rectangle (current page.north east);
+  \begin{scope}
+    \foreach \r/\op in {3.2/0.08, 2.4/0.11, 1.6/0.13}{
+      \fill[blobcolor, opacity=\op]
+        ([xshift=0.9cm, yshift=-0.6cm]current page.north east) circle (\r cm);
+    }
+  \end{scope}
+  \node[text=themebluelight, font=\fontsize{52}{52}\bfseries, opacity=0.25]
+    at ([xshift=-1.2cm, yshift=-0.6cm]current page.north east) {02};
+  \draw[themeblue!40, line width=0.4pt]
+    ([xshift=0.6cm, yshift=-1.0cm]current page.north west)
+    -- ([xshift=-0.6cm, yshift=-1.0cm]current page.north east);
+  \node[anchor=west, text=themebluedark, font=\large\bfseries]
+    at ([xshift=0.7cm, yshift=-0.55cm]current page.north west)
+    {02 --- MVTec 3D-AD : Cat\'egories \& D\'efauts};
+
+  %% En-tete table gauche
+  \fill[themeblue!65, rounded corners=2pt]
+    ([xshift=0.6cm, yshift=-1.2cm]current page.north west)
+    rectangle ([xshift=7.8cm, yshift=-1.60cm]current page.north west);
+  \node[anchor=west, text=white, font=\tiny\bfseries]
+    at ([xshift=0.75cm, yshift=-1.40cm]current page.north west) {Cat\'egorie};
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=3.85cm, yshift=-1.40cm]current page.north west) {$N_{anomaly}$};
+  \node[anchor=west, text=white, font=\tiny\bfseries]
+    at ([xshift=4.8cm, yshift=-1.40cm]current page.north west) {Types de d\'efauts};
+
+  %% En-tete table droite
+  \fill[themeblue!65, rounded corners=2pt]
+    ([xshift=8.2cm, yshift=-1.2cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-1.60cm]current page.north west);
+  \node[anchor=west, text=white, font=\tiny\bfseries]
+    at ([xshift=8.35cm, yshift=-1.40cm]current page.north west) {Cat\'egorie};
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=11.45cm, yshift=-1.40cm]current page.north west) {$N_{anomaly}$};
+  \node[anchor=west, text=white, font=\tiny\bfseries]
+    at ([xshift=12.4cm, yshift=-1.40cm]current page.north west) {Types de d\'efauts};
+
+  %% Macro pour ligne (alternance couleur)
+  %% Lignes gauche
+  \foreach \i/\bg in {0/8, 1/0, 2/8, 3/0, 4/8}{
+    \fill[themeblue!\bg]
+      ([xshift=0.6cm, yshift={-1.60cm-\i*0.50cm}]current page.north west)
+      rectangle ([xshift=7.8cm, yshift={-2.10cm-\i*0.50cm}]current page.north west);
+  }
+  \foreach \i/\bg in {0/8, 1/0, 2/8, 3/0, 4/8}{
+    \fill[themeblue!\bg]
+      ([xshift=8.2cm, yshift={-1.60cm-\i*0.50cm}]current page.north west)
+      rectangle ([xshift=15.6cm, yshift={-2.10cm-\i*0.50cm}]current page.north west);
+  }
+
+  %% Donnees lignes gauche
+  \node[anchor=west, text=textdark, font=\tiny\bfseries]
+    at ([xshift=0.75cm, yshift=-1.85cm]current page.north west) {Bagel};
+  \node[text=textdark, font=\tiny]
+    at ([xshift=3.85cm, yshift=-1.85cm]current page.north west) {93};
+  \node[anchor=west, text=textdark, font=\tiny]
+    at ([xshift=4.8cm, yshift=-1.85cm]current page.north west) {crack, cut, hole, print};
+
+  \node[anchor=west, text=textdark, font=\tiny\bfseries]
+    at ([xshift=0.75cm, yshift=-2.35cm]current page.north west) {Cable Gland};
+  \node[text=textdark, font=\tiny]
+    at ([xshift=3.85cm, yshift=-2.35cm]current page.north west) {85};
+  \node[anchor=west, text=textdark, font=\tiny]
+    at ([xshift=4.8cm, yshift=-2.35cm]current page.north west) {bent, hole, thread};
+
+  \node[anchor=west, text=textdark, font=\tiny\bfseries]
+    at ([xshift=0.75cm, yshift=-2.85cm]current page.north west) {Carrot};
+  \node[text=textdark, font=\tiny]
+    at ([xshift=3.85cm, yshift=-2.85cm]current page.north west) {92};
+  \node[anchor=west, text=textdark, font=\tiny]
+    at ([xshift=4.8cm, yshift=-2.85cm]current page.north west) {bent, crack, cut};
+
+  \node[anchor=west, text=textdark, font=\tiny\bfseries]
+    at ([xshift=0.75cm, yshift=-3.35cm]current page.north west) {Cookie};
+  \node[text=textdark, font=\tiny]
+    at ([xshift=3.85cm, yshift=-3.35cm]current page.north west) {115};
+  \node[anchor=west, text=textdark, font=\tiny]
+    at ([xshift=4.8cm, yshift=-3.35cm]current page.north west) {bite, crack, hole};
+
+  \node[anchor=west, text=textdark, font=\tiny\bfseries]
+    at ([xshift=0.75cm, yshift=-3.85cm]current page.north west) {Dowel};
+  \node[text=textdark, font=\tiny]
+    at ([xshift=3.85cm, yshift=-3.85cm]current page.north west) {101};
+  \node[anchor=west, text=textdark, font=\tiny]
+    at ([xshift=4.8cm, yshift=-3.85cm]current page.north west) {broken, glue, hole, scratch};
+
+  %% Donnees lignes droite
+  \node[anchor=west, text=textdark, font=\tiny\bfseries]
+    at ([xshift=8.35cm, yshift=-1.85cm]current page.north west) {Foam};
+  \node[text=textdark, font=\tiny]
+    at ([xshift=11.45cm, yshift=-1.85cm]current page.north west) {102};
+  \node[anchor=west, text=textdark, font=\tiny]
+    at ([xshift=12.4cm, yshift=-1.85cm]current page.north west) {contamination, cut, hole};
+
+  \node[anchor=west, text=textdark, font=\tiny\bfseries]
+    at ([xshift=8.35cm, yshift=-2.35cm]current page.north west) {Peach};
+  \node[text=textdark, font=\tiny]
+    at ([xshift=11.45cm, yshift=-2.35cm]current page.north west) {112};
+  \node[anchor=west, text=textdark, font=\tiny]
+    at ([xshift=12.4cm, yshift=-2.35cm]current page.north west) {crack, cut, hole, shrink};
+
+  \node[anchor=west, text=textdark, font=\tiny\bfseries]
+    at ([xshift=8.35cm, yshift=-2.85cm]current page.north west) {Potato};
+  \node[text=textdark, font=\tiny]
+    at ([xshift=11.45cm, yshift=-2.85cm]current page.north west) {100};
+  \node[anchor=west, text=textdark, font=\tiny]
+    at ([xshift=12.4cm, yshift=-2.85cm]current page.north west) {crack, cut, poke};
+
+  \node[anchor=west, text=textdark, font=\tiny\bfseries]
+    at ([xshift=8.35cm, yshift=-3.35cm]current page.north west) {Rope};
+  \node[text=textdark, font=\tiny]
+    at ([xshift=11.45cm, yshift=-3.35cm]current page.north west) {100};
+  \node[anchor=west, text=textdark, font=\tiny]
+    at ([xshift=12.4cm, yshift=-3.35cm]current page.north west) {broken, split};
+
+  \node[anchor=west, text=textdark, font=\tiny\bfseries]
+    at ([xshift=8.35cm, yshift=-3.85cm]current page.north west) {Tire};
+  \node[text=textdark, font=\tiny]
+    at ([xshift=11.45cm, yshift=-3.85cm]current page.north west) {158};
+  \node[anchor=west, text=textdark, font=\tiny]
+    at ([xshift=12.4cm, yshift=-3.85cm]current page.north west) {cut, hole, multi-damage, poke};
+
+  %% Barre total
+  \fill[themeblue!20, rounded corners=2pt]
+    ([xshift=0.6cm, yshift=-4.10cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-4.55cm]current page.north west);
+  \node[text=themebluedark, font=\small\bfseries]
+    at ([xshift=8.1cm, yshift=-4.33cm]current page.north west)
+    {Total : \textbf{$\sim$1258} images anomales \ \textbullet\ \
+     \textbf{10} cat\'egories \ \textbullet\ \
+     \textbf{8} types de d\'efauts distincts};
+
+  %% 3 info boxes
+  \fill[themeblue!10, rounded corners=3pt]
+    ([xshift=0.6cm, yshift=-4.75cm]current page.north west)
+    rectangle ([xshift=5.2cm, yshift=-5.80cm]current page.north west);
+  \node[text=themebluedark, font=\tiny\bfseries]
+    at ([xshift=2.9cm, yshift=-4.98cm]current page.north west) {\faCamera\ \ Canal RGB};
+  \node[anchor=north, text=textdark, font=\tiny, text width=4.4cm, align=center]
+    at ([xshift=2.9cm, yshift=-5.12cm]current page.north west)
+    {Images 800$\times$800\,px, PNG\\Masques GT binaires par pixel};
+
+  \fill[themeblue!10, rounded corners=3pt]
+    ([xshift=5.7cm, yshift=-4.75cm]current page.north west)
+    rectangle ([xshift=10.3cm, yshift=-5.80cm]current page.north west);
+  \node[text=themebluedark, font=\tiny\bfseries]
+    at ([xshift=8.0cm, yshift=-4.98cm]current page.north west) {\faCube\ \ Nuage 3D (XYZ)};
+  \node[anchor=north, text=textdark, font=\tiny, text width=4.4cm, align=center]
+    at ([xshift=8.0cm, yshift=-5.12cm]current page.north west)
+    {Donn\'ees de profondeur structur\'ees\\Coordonn\'ees 3D par pixel};
+
+  \fill[themeblue!10, rounded corners=3pt]
+    ([xshift=10.8cm, yshift=-4.75cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-5.80cm]current page.north west);
+  \node[text=themebluedark, font=\tiny\bfseries]
+    at ([xshift=13.2cm, yshift=-4.98cm]current page.north west) {\faChartBar\ \ Split};
+  \node[anchor=north, text=textdark, font=\tiny, text width=4.4cm, align=center]
+    at ([xshift=13.2cm, yshift=-5.12cm]current page.north west)
+    {Train : normales uniquement\\Test : normales + anomales};
+
+\end{tikzpicture}
+\end{frame}
+
+%% ============================================================
+%%  SLIDE 4b - EDA
+%% ============================================================
+\begin{frame}{02 --- EDA : Distribution des Classes d'Anomalies}
+\begin{tikzpicture}[remember picture, overlay]
+  \fill[white] (current page.south west) rectangle (current page.north east);
+  \begin{scope}
+    \foreach \r/\op in {3.2/0.08, 2.4/0.11, 1.6/0.13}{
+      \fill[blobcolor, opacity=\op]
+        ([xshift=0.9cm, yshift=-0.6cm]current page.north east) circle (\r cm);
+    }
+  \end{scope}
+  \node[text=themebluelight, font=\fontsize{52}{52}\bfseries, opacity=0.25]
+    at ([xshift=-1.2cm, yshift=-0.6cm]current page.north east) {02};
+  \draw[themeblue!40, line width=0.4pt]
+    ([xshift=0.6cm, yshift=-1.0cm]current page.north west)
+    -- ([xshift=-0.6cm, yshift=-1.0cm]current page.north east);
+  \node[anchor=west, text=themebluedark, font=\large\bfseries]
+    at ([xshift=0.7cm, yshift=-0.55cm]current page.north west)
+    {02 --- EDA : Distribution des Classes d'Anomalies};
+
+  %% Sous-titre
+  \node[anchor=west, text=textmid, font=\scriptsize\itshape]
+    at ([xshift=0.7cm, yshift=-1.25cm]current page.north west)
+    {Fr\'equence de chaque type de d\'efaut dans le dataset multi-classes ($\sim$1258 instances)};
+
+  %% --- Barres horizontales (defaut : valeur approx) ---
+  %% crack ~310
+  \fill[themeblue!20, rounded corners=1pt]
+    ([xshift=2.8cm, yshift=-1.65cm]current page.north west)
+    rectangle ([xshift=2.8cm+9.61cm, yshift=-2.05cm]current page.north west);
+  \node[anchor=east, text=textdark, font=\tiny\bfseries]
+    at ([xshift=2.75cm, yshift=-1.85cm]current page.north west) {crack};
+  \node[anchor=west, text=themeblue, font=\tiny\bfseries]
+    at ([xshift=12.5cm, yshift=-1.85cm]current page.north west) {$\sim$310};
+
+  %% hole ~290
+  \fill[themeblue!30, rounded corners=1pt]
+    ([xshift=2.8cm, yshift=-2.15cm]current page.north west)
+    rectangle ([xshift=2.8cm+8.99cm, yshift=-2.55cm]current page.north west);
+  \node[anchor=east, text=textdark, font=\tiny\bfseries]
+    at ([xshift=2.75cm, yshift=-2.35cm]current page.north west) {hole};
+  \node[anchor=west, text=themeblue, font=\tiny\bfseries]
+    at ([xshift=11.88cm, yshift=-2.35cm]current page.north west) {$\sim$290};
+
+  %% cut ~265
+  \fill[themeblue!40, rounded corners=1pt]
+    ([xshift=2.8cm, yshift=-2.65cm]current page.north west)
+    rectangle ([xshift=2.8cm+8.20cm, yshift=-3.05cm]current page.north west);
+  \node[anchor=east, text=textdark, font=\tiny\bfseries]
+    at ([xshift=2.75cm, yshift=-2.85cm]current page.north west) {cut};
+  \node[anchor=west, text=themeblue, font=\tiny\bfseries]
+    at ([xshift=11.09cm, yshift=-2.85cm]current page.north west) {$\sim$265};
+
+  %% bent ~155
+  \fill[themeblue!50, rounded corners=1pt]
+    ([xshift=2.8cm, yshift=-3.15cm]current page.north west)
+    rectangle ([xshift=2.8cm+4.80cm, yshift=-3.55cm]current page.north west);
+  \node[anchor=east, text=textdark, font=\tiny\bfseries]
+    at ([xshift=2.75cm, yshift=-3.35cm]current page.north west) {bent};
+  \node[anchor=west, text=themeblue, font=\tiny\bfseries]
+    at ([xshift=7.69cm, yshift=-3.35cm]current page.north west) {$\sim$155};
+
+  %% scratch ~125
+  \fill[themeblue!60, rounded corners=1pt]
+    ([xshift=2.8cm, yshift=-3.65cm]current page.north west)
+    rectangle ([xshift=2.8cm+3.87cm, yshift=-4.05cm]current page.north west);
+  \node[anchor=east, text=textdark, font=\tiny\bfseries]
+    at ([xshift=2.75cm, yshift=-3.85cm]current page.north west) {scratch};
+  \node[anchor=west, text=themeblue, font=\tiny\bfseries]
+    at ([xshift=6.76cm, yshift=-3.85cm]current page.north west) {$\sim$125};
+
+  %% contamination ~80
+  \fill[orangewip!40, rounded corners=1pt]
+    ([xshift=2.8cm, yshift=-4.15cm]current page.north west)
+    rectangle ([xshift=2.8cm+2.48cm, yshift=-4.55cm]current page.north west);
+  \node[anchor=east, text=textdark, font=\tiny\bfseries]
+    at ([xshift=2.75cm, yshift=-4.35cm]current page.north west) {contamination};
+  \node[anchor=west, text=orangewip!80!black, font=\tiny\bfseries]
+    at ([xshift=5.37cm, yshift=-4.35cm]current page.north west) {$\sim$80};
+
+  %% print ~55
+  \fill[orangewip!30, rounded corners=1pt]
+    ([xshift=2.8cm, yshift=-4.65cm]current page.north west)
+    rectangle ([xshift=2.8cm+1.70cm, yshift=-5.05cm]current page.north west);
+  \node[anchor=east, text=textdark, font=\tiny\bfseries]
+    at ([xshift=2.75cm, yshift=-4.85cm]current page.north west) {print / bite};
+  \node[anchor=west, text=orangewip!80!black, font=\tiny\bfseries]
+    at ([xshift=4.59cm, yshift=-4.85cm]current page.north west) {$\sim$55};
+
+  %% thread ~38
+  \fill[reddanger!30, rounded corners=1pt]
+    ([xshift=2.8cm, yshift=-5.15cm]current page.north west)
+    rectangle ([xshift=2.8cm+1.18cm, yshift=-5.55cm]current page.north west);
+  \node[anchor=east, text=textdark, font=\tiny\bfseries]
+    at ([xshift=2.75cm, yshift=-5.35cm]current page.north west) {thread};
+  \node[anchor=west, text=reddanger, font=\tiny\bfseries]
+    at ([xshift=4.07cm, yshift=-5.35cm]current page.north west) {$\sim$38};
+
+  %% color ~30
+  \fill[reddanger!20, rounded corners=1pt]
+    ([xshift=2.8cm, yshift=-5.65cm]current page.north west)
+    rectangle ([xshift=2.8cm+0.93cm, yshift=-6.05cm]current page.north west);
+  \node[anchor=east, text=textdark, font=\tiny\bfseries]
+    at ([xshift=2.75cm, yshift=-5.85cm]current page.north west) {color};
+  \node[anchor=west, text=reddanger, font=\tiny\bfseries]
+    at ([xshift=3.82cm, yshift=-5.85cm]current page.north west) {$\sim$30};
+
+  %% Axe vertical
+  \draw[textlight, line width=0.4pt]
+    ([xshift=2.78cm, yshift=-1.55cm]current page.north west)
+    -- ([xshift=2.78cm, yshift=-6.15cm]current page.north west);
+
+  %% Legende
+  \fill[themeblue!20, rounded corners=2pt]
+    ([xshift=12.8cm, yshift=-2.0cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-2.35cm]current page.north west);
+  \node[text=themebluedark, font=\tiny\bfseries]
+    at ([xshift=14.2cm, yshift=-2.18cm]current page.north west) {Classes fr\'equentes};
+
+  \fill[orangewip!40, rounded corners=2pt]
+    ([xshift=12.8cm, yshift=-2.55cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-2.90cm]current page.north west);
+  \node[text=textdark, font=\tiny\bfseries]
+    at ([xshift=14.2cm, yshift=-2.73cm]current page.north west) {Classes mod\'er\'ees};
+
+  \fill[reddanger!25, rounded corners=2pt]
+    ([xshift=12.8cm, yshift=-3.10cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-3.45cm]current page.north west);
+  \node[text=textdark, font=\tiny\bfseries]
+    at ([xshift=14.2cm, yshift=-3.28cm]current page.north west) {Classes rares};
+
+  %% Observation
+  \fill[themebluevlight!60, rounded corners=3pt]
+    ([xshift=0.6cm, yshift=-6.30cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-7.10cm]current page.north west);
+  \node[anchor=west, text=textdark, font=\scriptsize, text width=14.5cm]
+    at ([xshift=0.8cm, yshift=-6.70cm]current page.north west)
+    {\textbf{Observation :} Fort d\'es\'equilibre entre classes ---
+     \textit{crack/hole/cut} repr\'esentent $>$68\,\% des instances,
+     tandis que \textit{thread} et \textit{color} sont 8--10$\times$ moins repr\'esent\'es.
+     \textbf{Strat\'egie adopt\'ee :} poids de classes inversement proportionnels \`a la fr\'equence.};
+
+\end{tikzpicture}
+\end{frame}
+
+%% ============================================================
+%%  SLIDE 4 - PIPELINE DE PROJET
+%% ============================================================
+\begin{frame}{03 --- Pipeline de Projet}
+\begin{tikzpicture}[remember picture, overlay]
+  \fill[white] (current page.south west) rectangle (current page.north east);
+
+  \begin{scope}
+    \foreach \r/\op in {3.2/0.08, 2.4/0.11, 1.6/0.13}{
+      \fill[blobcolor, opacity=\op]
+        ([xshift=0.9cm, yshift=-0.6cm]current page.north east) circle (\r cm);
+    }
+  \end{scope}
+  \node[text=themebluelight, font=\fontsize{52}{52}\bfseries, opacity=0.25]
+    at ([xshift=-1.2cm, yshift=-0.6cm]current page.north east) {03};
+
+  \draw[themeblue!40, line width=0.4pt]
+    ([xshift=0.6cm, yshift=-1.0cm]current page.north west)
+    -- ([xshift=-0.6cm, yshift=-1.0cm]current page.north east);
+  \node[anchor=west, text=themebluedark, font=\large\bfseries]
+    at ([xshift=0.7cm, yshift=-0.55cm]current page.north west)
+    {03 --- Pipeline de Projet};
+
+  %% -- Bloc Dataset info --
+  \fill[themebluevlight!60, rounded corners=4pt]
+    ([xshift=0.6cm, yshift=-1.35cm]current page.north west)
+    rectangle ([xshift=7.4cm, yshift=-3.1cm]current page.north west);
+  \node[anchor=west, text=themebluedark, font=\small\bfseries]
+    at ([xshift=0.8cm, yshift=-1.65cm]current page.north west)
+    {\faDatabase\ \ MVTec 3D-AD};
+  \node[anchor=west, text=textdark, font=\scriptsize, text width=5.8cm]
+    at ([xshift=0.8cm, yshift=-2.10cm]current page.north west)
+    {10 cat\'egories : bagel, cable\_gland, carrot, cookie, dowel,
+     foam, peach, potato, rope, tire};
+  \node[anchor=west, text=textdark, font=\scriptsize, text width=5.8cm]
+    at ([xshift=0.8cm, yshift=-2.75cm]current page.north west)
+    {Donn\'ees RGB + nuage de points XYZ \textbullet\
+     Masques GT polygon};
+
+  %% -- Bloc Pipeline fleches --
+  %% Etape 1
+  \fill[themeblue!15, rounded corners=3pt]
+    ([xshift=0.6cm, yshift=-3.35cm]current page.north west)
+    rectangle ([xshift=3.0cm, yshift=-4.0cm]current page.north west);
+  \node[text=themebluedark, font=\scriptsize\bfseries, align=center]
+    at ([xshift=1.8cm, yshift=-3.68cm]current page.north west)
+    {EDA};
+
+  \fill[themeblue] ([xshift=3.15cm, yshift=-3.68cm]current page.north west)
+    circle (0.05cm);
+  \draw[themeblue!60, ->, >=stealth, line width=0.8pt]
+    ([xshift=3.05cm, yshift=-3.68cm]current page.north west)
+    -- ([xshift=3.55cm, yshift=-3.68cm]current page.north west);
+
+  %% Etape 2
+  \fill[themeblue!15, rounded corners=3pt]
+    ([xshift=3.6cm, yshift=-3.35cm]current page.north west)
+    rectangle ([xshift=6.5cm, yshift=-4.0cm]current page.north west);
+  \node[text=themebluedark, font=\scriptsize\bfseries, align=center]
+    at ([xshift=5.05cm, yshift=-3.68cm]current page.north west)
+    {Aug};
+
+  \draw[themeblue!60, ->, >=stealth, line width=0.8pt]
+    ([xshift=6.55cm, yshift=-3.68cm]current page.north west)
+    -- ([xshift=7.05cm, yshift=-3.68cm]current page.north west);
+
+  %% Etape 3
+  \fill[themeblue!15, rounded corners=3pt]
+    ([xshift=7.1cm, yshift=-3.35cm]current page.north west)
+    rectangle ([xshift=9.8cm, yshift=-4.0cm]current page.north west);
+  \node[text=themebluedark, font=\scriptsize\bfseries, align=center]
+    at ([xshift=8.45cm, yshift=-3.68cm]current page.north west)
+    {Build YOLO};
+
+  \draw[themeblue!60, ->, >=stealth, line width=0.8pt]
+    ([xshift=9.85cm, yshift=-3.68cm]current page.north west)
+    -- ([xshift=10.35cm, yshift=-3.68cm]current page.north west);
+
+  %% Etape 4
+  \fill[themeblue, rounded corners=3pt]
+    ([xshift=10.4cm, yshift=-3.35cm]current page.north west)
+    rectangle ([xshift=13.0cm, yshift=-4.0cm]current page.north west);
+  \node[text=white, font=\scriptsize\bfseries, align=center]
+    at ([xshift=11.7cm, yshift=-3.68cm]current page.north west)
+    {Entra\^inement};
+
+  \draw[themeblue!60, ->, >=stealth, line width=0.8pt]
+    ([xshift=13.05cm, yshift=-3.68cm]current page.north west)
+    -- ([xshift=13.55cm, yshift=-3.68cm]current page.north west);
+
+  %% Etape 5
+  \fill[greenok!40, rounded corners=3pt]
+    ([xshift=13.6cm, yshift=-3.35cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-4.0cm]current page.north west);
+  \node[text=white, font=\scriptsize\bfseries, align=center]
+    at ([xshift=14.6cm, yshift=-3.68cm]current page.north west)
+    {\'Evaluation};
+
+  %% -- Details pipeline --
+  \node[anchor=west, text=textdark, font=\scriptsize, text width=6.5cm]
+    at ([xshift=7.6cm, yshift=-1.65cm]current page.north west)
+    {\textbf{Construction labels YOLO :}
+     masques GT binaris\'es $\to$ contours polygonaux
+     $\to$ format YOLO (.txt normalis\'e)};
+
+  \node[anchor=west, text=textdark, font=\scriptsize, text width=6.5cm]
+    at ([xshift=7.6cm, yshift=-2.55cm]current page.north west)
+    {\textbf{Augmentation (Albumentations) :}
+     flip H/V, rotation, zoom, bruit gaussien,
+     flou, distorsion, changement de luminosit\'e};
+
+  %% Statistiques
+  \fill[themeblue!10, rounded corners=3pt]
+    ([xshift=0.6cm, yshift=-4.3cm]current page.north west)
+    rectangle ([xshift=4.8cm, yshift=-5.2cm]current page.north west);
+  \node[text=themebluedark, font=\scriptsize\bfseries]
+    at ([xshift=2.7cm, yshift=-4.58cm]current page.north west)
+    {Anomalous samples};
+  \node[text=themeblue, font=\normalsize\bfseries]
+    at ([xshift=2.7cm, yshift=-4.95cm]current page.north west)
+    {$\sim$1258 images};
+
+  \fill[themeblue!10, rounded corners=3pt]
+    ([xshift=5.3cm, yshift=-4.3cm]current page.north west)
+    rectangle ([xshift=9.5cm, yshift=-5.2cm]current page.north west);
+  \node[text=themebluedark, font=\scriptsize\bfseries]
+    at ([xshift=7.4cm, yshift=-4.58cm]current page.north west)
+    {Apr\`es augmentation};
+  \node[text=themeblue, font=\normalsize\bfseries]
+    at ([xshift=7.4cm, yshift=-4.95cm]current page.north west)
+    {$\sim$6290 images};
+
+  \fill[themeblue!10, rounded corners=3pt]
+    ([xshift=10.0cm, yshift=-4.3cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-5.2cm]current page.north west);
+  \node[text=themebluedark, font=\scriptsize\bfseries]
+    at ([xshift=12.8cm, yshift=-4.58cm]current page.north west)
+    {Classes (multi-class)};
+  \node[text=themeblue, font=\normalsize\bfseries]
+    at ([xshift=12.8cm, yshift=-4.95cm]current page.north west)
+    {bent, crack, cut, hole, scratch...};
+
+\end{tikzpicture}
+\end{frame}
+
+%% ============================================================
+%%  SLIDE - MODELE CHOISI YOLO26s
+%% ============================================================
+\begin{frame}{04 --- Mod\`ele Choisi : YOLO26s-seg}
+\begin{tikzpicture}[remember picture, overlay]
+  \fill[white] (current page.south west) rectangle (current page.north east);
+  \begin{scope}
+    \foreach \r/\op in {3.2/0.08, 2.4/0.11, 1.6/0.13}{
+      \fill[blobcolor, opacity=\op]
+        ([xshift=0.9cm, yshift=-0.6cm]current page.north east) circle (\r cm);
+    }
+  \end{scope}
+  \node[text=themebluelight, font=\fontsize{52}{52}\bfseries, opacity=0.25]
+    at ([xshift=-1.2cm, yshift=-0.6cm]current page.north east) {04};
+  \draw[themeblue!40, line width=0.4pt]
+    ([xshift=0.6cm, yshift=-1.0cm]current page.north west)
+    -- ([xshift=-0.6cm, yshift=-1.0cm]current page.north east);
+  \node[anchor=west, text=themebluedark, font=\large\bfseries]
+    at ([xshift=0.7cm, yshift=-0.55cm]current page.north west)
+    {04 --- Mod\`ele Choisi : YOLO26s-seg};
+
+  %% Titre justification
+  \node[anchor=west, text=textmid, font=\scriptsize\itshape]
+    at ([xshift=0.7cm, yshift=-1.25cm]current page.north west)
+    {Pourquoi YOLO26s-seg ? Comparaison des alternatives et crit\`eres de s\'election};
+
+  %% Tableau comparatif variantes YOLO26
+  \fill[themeblue!60, rounded corners=2pt]
+    ([xshift=0.6cm, yshift=-1.55cm]current page.north west)
+    rectangle ([xshift=11.0cm, yshift=-1.95cm]current page.north west);
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=2.2cm, yshift=-1.75cm]current page.north west) {Variante};
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=4.4cm, yshift=-1.75cm]current page.north west) {Params (M)};
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=6.4cm, yshift=-1.75cm]current page.north west) {GFLOPs};
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=8.4cm, yshift=-1.75cm]current page.north west) {mAP-seg};
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=10.2cm, yshift=-1.75cm]current page.north west) {Choix};
+
+  \foreach \i/\bg in {0/8, 1/0, 2/8, 3/0}{
+    \fill[themeblue!\bg]
+      ([xshift=0.6cm, yshift={-1.95cm-\i*0.45cm}]current page.north west)
+      rectangle ([xshift=11.0cm, yshift={-2.40cm-\i*0.45cm}]current page.north west);
+  }
+
+  \node[text=textdark, font=\tiny\bfseries]
+    at ([xshift=2.2cm, yshift=-2.18cm]current page.north west) {YOLO26n-seg};
+  \node[text=textdark, font=\tiny]
+    at ([xshift=4.4cm, yshift=-2.18cm]current page.north west) {2.9};
+  \node[text=textdark, font=\tiny]
+    at ([xshift=6.4cm, yshift=-2.18cm]current page.north west) {10.4};
+  \node[text=textdark, font=\tiny]
+    at ([xshift=8.4cm, yshift=-2.18cm]current page.north west) {38.3};
+  \node[text=textmid, font=\tiny\itshape]
+    at ([xshift=10.2cm, yshift=-2.18cm]current page.north west) {trop l\'eger};
+
+  \fill[greenok!25, rounded corners=1pt]
+    ([xshift=0.6cm, yshift=-2.40cm]current page.north west)
+    rectangle ([xshift=11.0cm, yshift=-2.85cm]current page.north west);
+  \node[text=themebluedark, font=\tiny\bfseries]
+    at ([xshift=2.2cm, yshift=-2.63cm]current page.north west) {YOLO26s-seg \faCheck};
+  \node[text=themebluedark, font=\tiny\bfseries]
+    at ([xshift=4.4cm, yshift=-2.63cm]current page.north west) {10.1};
+  \node[text=themebluedark, font=\tiny\bfseries]
+    at ([xshift=6.4cm, yshift=-2.63cm]current page.north west) {35.5};
+  \node[text=themebluedark, font=\tiny\bfseries]
+    at ([xshift=8.4cm, yshift=-2.63cm]current page.north west) {42.9};
+  \node[text=greenok!70!black, font=\tiny\bfseries]
+    at ([xshift=10.2cm, yshift=-2.63cm]current page.north west) {optimal};
+
+  \node[text=textdark, font=\tiny]
+    at ([xshift=2.2cm, yshift=-3.08cm]current page.north west) {YOLO26m-seg};
+  \node[text=textdark, font=\tiny]
+    at ([xshift=4.4cm, yshift=-3.08cm]current page.north west) {27.7};
+  \node[text=textdark, font=\tiny]
+    at ([xshift=6.4cm, yshift=-3.08cm]current page.north west) {123.8};
+  \node[text=textdark, font=\tiny]
+    at ([xshift=8.4cm, yshift=-3.08cm]current page.north west) {44.3};
+  \node[text=textmid, font=\tiny\itshape]
+    at ([xshift=10.2cm, yshift=-3.08cm]current page.north west) {sur-param};
+
+  \node[text=textdark, font=\tiny]
+    at ([xshift=2.2cm, yshift=-3.53cm]current page.north west) {YOLO26l-seg};
+  \node[text=textdark, font=\tiny]
+    at ([xshift=4.4cm, yshift=-3.53cm]current page.north west) {46.3};
+  \node[text=textdark, font=\tiny]
+    at ([xshift=6.4cm, yshift=-3.53cm]current page.north west) {207.7};
+  \node[text=textdark, font=\tiny]
+    at ([xshift=8.4cm, yshift=-3.53cm]current page.north west) {45.2};
+  \node[text=textmid, font=\tiny\itshape]
+    at ([xshift=10.2cm, yshift=-3.53cm]current page.north west) {sur-param};
+
+  %% Criteres de choix
+  \node[anchor=west, text=themebluedark, font=\small\bfseries]
+    at ([xshift=11.4cm, yshift=-1.55cm]current page.north west)
+    {Crit\`eres de s\'election};
+
+  \fill[themeblue!12, rounded corners=3pt]
+    ([xshift=11.4cm, yshift=-1.90cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-2.65cm]current page.north west);
+  \node[anchor=west, text=themeblue, font=\tiny\bfseries]
+    at ([xshift=11.6cm, yshift=-2.10cm]current page.north west) {\faBalanceScale\ \ Pr\'ecision vs vitesse};
+  \node[anchor=west, text=textdark, font=\tiny, text width=3.8cm]
+    at ([xshift=11.6cm, yshift=-2.42cm]current page.north west)
+    {+4.6 pts mAP vs nano, m\^eme latence temps r\'eel};
+
+  \fill[themeblue!12, rounded corners=3pt]
+    ([xshift=11.4cm, yshift=-2.80cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-3.55cm]current page.north west);
+  \node[anchor=west, text=themeblue, font=\tiny\bfseries]
+    at ([xshift=11.6cm, yshift=-3.00cm]current page.north west) {\faDatabase\ \ Taille du dataset};
+  \node[anchor=west, text=textdark, font=\tiny, text width=3.8cm]
+    at ([xshift=11.6cm, yshift=-3.32cm]current page.north west)
+    {$\sim$6290 images : variantes large risquent le surapprentissage};
+
+  \fill[themeblue!12, rounded corners=3pt]
+    ([xshift=11.4cm, yshift=-3.70cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-4.45cm]current page.north west);
+  \node[anchor=west, text=themeblue, font=\tiny\bfseries]
+    at ([xshift=11.6cm, yshift=-3.90cm]current page.north west) {\faMicrochip\ \ D\'eploiement edge};
+  \node[anchor=west, text=textdark, font=\tiny, text width=3.8cm]
+    at ([xshift=11.6cm, yshift=-4.22cm]current page.north west)
+    {Exportable ONNX/TensorRT, compatible cam\'eras industrielles};
+
+  %% Conclusion
+  \fill[themebluevlight!80, rounded corners=3pt]
+    ([xshift=0.6cm, yshift=-4.00cm]current page.north west)
+    rectangle ([xshift=11.0cm, yshift=-4.80cm]current page.north west);
+  \node[text=themebluedark, font=\scriptsize\bfseries]
+    at ([xshift=5.8cm, yshift=-4.23cm]current page.north west)
+    {Segmentation d'instance vs D\'etection};
+  \node[anchor=west, text=textdark, font=\scriptsize, text width=10.0cm]
+    at ([xshift=0.8cm, yshift=-4.58cm]current page.north west)
+    {La segmentation pixel-level permet de localiser pr\'ecis\'ement l'anomalie
+     et de calculer sa surface --- indispensable pour le contr\^ole qualit\'e industriel.};
+
+\end{tikzpicture}
+\end{frame}
+
+%% ============================================================
+%%  SLIDE 5 - ARCHITECTURE YOLO26
+%% ============================================================
+\begin{frame}{05 --- Architecture YOLO26s-seg}
+\begin{tikzpicture}[remember picture, overlay]
+  \fill[white] (current page.south west) rectangle (current page.north east);
+
+  \begin{scope}
+    \foreach \r/\op in {3.2/0.08, 2.4/0.11, 1.6/0.13}{
+      \fill[blobcolor, opacity=\op]
+        ([xshift=0.9cm, yshift=-0.6cm]current page.north east) circle (\r cm);
+    }
+  \end{scope}
+  \node[text=themebluelight, font=\fontsize{52}{52}\bfseries, opacity=0.25]
+    at ([xshift=-1.2cm, yshift=-0.6cm]current page.north east) {03};
+
+  \draw[themeblue!40, line width=0.4pt]
+    ([xshift=0.6cm, yshift=-1.0cm]current page.north west)
+    -- ([xshift=-0.6cm, yshift=-1.0cm]current page.north east);
+  \node[anchor=west, text=themebluedark, font=\large\bfseries]
+    at ([xshift=0.7cm, yshift=-0.55cm]current page.north west)
+    {03 --- Architecture YOLO26};
+
+  %% -- Colonne gauche : schema architecture --
+  \fill[themebluevlight!50, rounded corners=4pt]
+    ([xshift=0.6cm, yshift=-1.35cm]current page.north west)
+    rectangle ([xshift=7.8cm, yshift=-5.3cm]current page.north west);
+
+  \node[anchor=west, text=themebluedark, font=\small\bfseries]
+    at ([xshift=0.9cm, yshift=-1.7cm]current page.north west)
+    {\faBrain\ \ YOLO26s-seg};
+
+  %% Architecture blocs
+  \fill[themeblue!30, rounded corners=3pt]
+    ([xshift=1.0cm, yshift=-2.1cm]current page.north west)
+    rectangle ([xshift=7.4cm, yshift=-2.65cm]current page.north west);
+  \node[text=themebluedark, font=\scriptsize\bfseries]
+    at ([xshift=4.2cm, yshift=-2.38cm]current page.north west)
+    {Backbone C3k2 -- SPPF -- C2PSA};
+
+  \draw[themeblue!50, ->, >=stealth]
+    ([xshift=4.2cm, yshift=-2.65cm]current page.north west)
+    -- ([xshift=4.2cm, yshift=-2.95cm]current page.north west);
+
+  \fill[themeblue!30, rounded corners=3pt]
+    ([xshift=1.0cm, yshift=-2.95cm]current page.north west)
+    rectangle ([xshift=7.4cm, yshift=-3.5cm]current page.north west);
+  \node[text=themebluedark, font=\scriptsize\bfseries]
+    at ([xshift=4.2cm, yshift=-3.23cm]current page.north west)
+    {Neck PAN-FPN (multi-scale)};
+
+  \draw[themeblue!50, ->, >=stealth]
+    ([xshift=4.2cm, yshift=-3.5cm]current page.north west)
+    -- ([xshift=4.2cm, yshift=-3.8cm]current page.north west);
+
+  \fill[greenok!30, rounded corners=3pt]
+    ([xshift=1.0cm, yshift=-3.8cm]current page.north west)
+    rectangle ([xshift=7.4cm, yshift=-4.35cm]current page.north west);
+  \node[text=textdark, font=\scriptsize\bfseries]
+    at ([xshift=4.2cm, yshift=-4.08cm]current page.north west)
+    {Head : Det + Seg (masque 160$\times$160)};
+
+  \draw[themeblue!50, ->, >=stealth]
+    ([xshift=4.2cm, yshift=-4.35cm]current page.north west)
+    -- ([xshift=4.2cm, yshift=-4.65cm]current page.north west);
+
+  \fill[greenok!50, rounded corners=3pt]
+    ([xshift=1.0cm, yshift=-4.65cm]current page.north west)
+    rectangle ([xshift=7.4cm, yshift=-5.15cm]current page.north west);
+  \node[text=white, font=\scriptsize\bfseries]
+    at ([xshift=4.2cm, yshift=-4.9cm]current page.north west)
+    {Polygons + Binary Masks};
+
+  %% -- Colonne droite : hyperparametres --
+  \node[anchor=west, text=themebluedark, font=\small\bfseries]
+    at ([xshift=8.1cm, yshift=-1.7cm]current page.north west)
+    {\faWrench\ \ Hyperparamatres d'entra\^inement};
+
+  %% Multi-classe
+  \fill[themeblue!20, rounded corners=3pt]
+    ([xshift=8.1cm, yshift=-2.05cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-2.45cm]current page.north west);
+  \node[anchor=west, text=themebluedark, font=\scriptsize\bfseries]
+    at ([xshift=8.3cm, yshift=-2.25cm]current page.north west)
+    {Mod\`ele Multi-classes (8 classes)};
+
+  \node[anchor=west, text=textdark, font=\scriptsize]
+    at ([xshift=8.3cm, yshift=-2.75cm]current page.north west)
+    {Epochs : 150 \quad Batch : 16 \quad LR : $10^{-3}$ \quad Patience : 10};
+  \node[anchor=west, text=textdark, font=\scriptsize]
+    at ([xshift=8.3cm, yshift=-3.15cm]current page.north west)
+    {Scheduler : Cosine LR \quad Optimizer : AdamW};
+  \node[anchor=west, text=textdark, font=\scriptsize]
+    at ([xshift=8.3cm, yshift=-3.55cm]current page.north west)
+    {Classes : bent, color, contamination, crack, cut, hole, scratch, thread...};
+
+\end{tikzpicture}
+\end{frame}
+
+%% ============================================================
+%%  SLIDE 6b - METRIQUES D'EVALUATION
+%% ============================================================
+\begin{frame}{06 --- M\'etriques d'\'Evaluation : D\'efinition et R\^ole}
+\begin{tikzpicture}[remember picture, overlay]
+  \fill[white] (current page.south west) rectangle (current page.north east);
+
+  \begin{scope}
+    \foreach \r/\op in {3.2/0.08, 2.4/0.11, 1.6/0.13}{
+      \fill[blobcolor, opacity=\op]
+        ([xshift=0.9cm, yshift=-0.6cm]current page.north east) circle (\r cm);
+    }
+  \end{scope}
+  \node[text=themebluelight, font=\fontsize{52}{52}\bfseries, opacity=0.25]
+    at ([xshift=-1.2cm, yshift=-0.6cm]current page.north east) {06};
+
+  \draw[themeblue!40, line width=0.4pt]
+    ([xshift=0.6cm, yshift=-1.0cm]current page.north west)
+    -- ([xshift=-0.6cm, yshift=-1.0cm]current page.north east);
+  \node[anchor=west, text=themebluedark, font=\large\bfseries]
+    at ([xshift=0.7cm, yshift=-0.55cm]current page.north west)
+    {06 --- M\'etriques d'\'Evaluation : D\'efinition et R\^ole};
+
+  %% ---- Colonne gauche : fondations ----
+
+  %% IoU
+  \fill[themeblue!18, rounded corners=4pt]
+    ([xshift=0.6cm, yshift=-1.35cm]current page.north west)
+    rectangle ([xshift=7.7cm, yshift=-3.10cm]current page.north west);
+  \fill[themeblue!60, rounded corners=3pt]
+    ([xshift=0.6cm, yshift=-1.35cm]current page.north west)
+    rectangle ([xshift=7.7cm, yshift=-1.72cm]current page.north west);
+  \node[text=white, font=\scriptsize\bfseries]
+    at ([xshift=4.15cm, yshift=-1.535cm]current page.north west)
+    {IoU --- Intersection over Union};
+  \node[anchor=north west, text=textdark, font=\scriptsize, text width=6.6cm]
+    at ([xshift=0.75cm, yshift=-1.82cm]current page.north west)
+    {$\displaystyle\text{IoU} = \frac{|\text{Pr\'ediction} \cap \text{V\'erit\'e}|}{|\text{Pr\'ediction} \cup \text{V\'erit\'e}|}$
+     \quad Mesure le chevauchement pixel-level entre masque pr\'edit et masque GT.};
+
+  %% Precision / Recall
+  \fill[themeblue!18, rounded corners=4pt]
+    ([xshift=0.6cm, yshift=-3.30cm]current page.north west)
+    rectangle ([xshift=7.7cm, yshift=-5.05cm]current page.north west);
+  \fill[themeblue!60, rounded corners=3pt]
+    ([xshift=0.6cm, yshift=-3.30cm]current page.north west)
+    rectangle ([xshift=7.7cm, yshift=-3.67cm]current page.north west);
+  \node[text=white, font=\scriptsize\bfseries]
+    at ([xshift=4.15cm, yshift=-3.485cm]current page.north west)
+    {Precision \& Recall};
+  \node[anchor=west, text=textdark, font=\scriptsize, text width=6.5cm]
+    at ([xshift=0.75cm, yshift=-3.92cm]current page.north west)
+    {$\text{Precision} = \dfrac{TP}{TP + FP}$ \quad proportion des d\'etections correctes};
+  \node[anchor=west, text=textdark, font=\scriptsize, text width=6.5cm]
+    at ([xshift=0.75cm, yshift=-4.52cm]current page.north west)
+    {$\text{Recall} = \dfrac{TP}{TP + FN}$ \quad proportion des anomalies retrouv\'ees};
+
+  %% AP definition
+  \fill[themeblue!18, rounded corners=4pt]
+    ([xshift=0.6cm, yshift=-5.25cm]current page.north west)
+    rectangle ([xshift=7.7cm, yshift=-6.80cm]current page.north west);
+  \fill[themeblue!60, rounded corners=3pt]
+    ([xshift=0.6cm, yshift=-5.25cm]current page.north west)
+    rectangle ([xshift=7.7cm, yshift=-5.62cm]current page.north west);
+  \node[text=white, font=\scriptsize\bfseries]
+    at ([xshift=4.15cm, yshift=-5.435cm]current page.north west)
+    {AP --- Average Precision};
+  \node[anchor=north west, text=textdark, font=\scriptsize, text width=6.5cm, align=center]
+    at ([xshift=0.75cm, yshift=-5.72cm]current page.north west)
+    {Aire sous la courbe Precision-Recall.
+     Calcul\'ee s\'epar\'ement pour chaque classe,
+     puis moyenn\'ee $\to$ \textbf{mAP}.};
+
+  %% ---- Colonne droite : mAP50 vs mAP50-95 ----
+
+  %% mAP@0.5
+  \fill[greenok!15, rounded corners=4pt]
+    ([xshift=8.0cm, yshift=-1.35cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-3.10cm]current page.north west);
+  \fill[greenok!60, rounded corners=3pt]
+    ([xshift=8.0cm, yshift=-1.35cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-1.72cm]current page.north west);
+  \node[text=white, font=\scriptsize\bfseries]
+    at ([xshift=11.8cm, yshift=-1.535cm]current page.north west)
+    {mAP@0.5 \ (mAP50)};
+  \node[anchor=north west, text=textdark, font=\scriptsize, text width=6.8cm, align=left]
+    at ([xshift=8.2cm, yshift=-1.82cm]current page.north west)
+    {Une d\'etection est consid\'er\'ee correcte si
+     $\text{IoU} \geq 0.50$. Seuil standard, tol\'erant
+     aux impr\'ecisions de contour.
+     \textbf{mAP@0.5 : 0.839}};
+
+  %% mAP@0.5:0.95
+  \fill[orangewip!15, rounded corners=4pt]
+    ([xshift=8.0cm, yshift=-3.30cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-5.05cm]current page.north west);
+  \fill[orangewip!60, rounded corners=3pt]
+    ([xshift=8.0cm, yshift=-3.30cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-3.67cm]current page.north west);
+  \node[text=white, font=\scriptsize\bfseries]
+    at ([xshift=11.8cm, yshift=-3.485cm]current page.north west)
+    {mAP@0.5:0.95 \ (mAP50-95)};
+  \node[anchor=north west, text=textdark, font=\scriptsize, text width=6.8cm, align=left]
+    at ([xshift=8.2cm, yshift=-3.77cm]current page.north west)
+    {Moyenne des AP calcul\'ees pour des seuils IoU
+     de 0.50 \`a 0.95 (pas 0.05). M\'etrique COCO,
+     plus exigeante sur la pr\'ecision du masque.
+     \textbf{mAP@0.5:0.95 : 0.507}};
+
+  %% Box vs Mask
+  \fill[themebluevlight!70, rounded corners=4pt]
+    ([xshift=8.0cm, yshift=-5.25cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-6.80cm]current page.north west);
+  \fill[themeblue!50, rounded corners=3pt]
+    ([xshift=8.0cm, yshift=-5.25cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-5.62cm]current page.north west);
+  \node[text=white, font=\scriptsize\bfseries]
+    at ([xshift=11.8cm, yshift=-5.435cm]current page.north west)
+    {Box vs.\ Mask};
+  \node[anchor=north west, text=textdark, font=\scriptsize, text width=6.8cm]
+    at ([xshift=8.2cm, yshift=-5.72cm]current page.north west)
+    {\textbf{Box} : IoU calcul\'e sur la bounding-box.
+     \textbf{Mask} : IoU calcul\'e sur le masque binaire pixel-level.
+     Nous utilisons \textbf{Mask} (segmentation d'instance).};
+
+\end{tikzpicture}
+\end{frame}
+
+%% ============================================================
+%%  SLIDE 6 - RESULTATS GLOBAUX
+%% ============================================================
+\begin{frame}{07 --- R\'esultats Globaux d'Entra\^inement}
+\begin{tikzpicture}[remember picture, overlay]
+  \fill[white] (current page.south west) rectangle (current page.north east);
+
+  \begin{scope}
+    \foreach \r/\op in {3.2/0.08, 2.4/0.11, 1.6/0.13}{
+      \fill[blobcolor, opacity=\op]
+        ([xshift=0.9cm, yshift=-0.6cm]current page.north east) circle (\r cm);
+    }
+  \end{scope}
+  \node[text=themebluelight, font=\fontsize{52}{52}\bfseries, opacity=0.25]
+    at ([xshift=-1.2cm, yshift=-0.6cm]current page.north east) {07};
+
+  \draw[themeblue!40, line width=0.4pt]
+    ([xshift=0.6cm, yshift=-1.0cm]current page.north west)
+    -- ([xshift=-0.6cm, yshift=-1.0cm]current page.north east);
+  \node[anchor=west, text=themebluedark, font=\large\bfseries]
+    at ([xshift=0.7cm, yshift=-0.55cm]current page.north west)
+    {07 --- R\'esultats Globaux d'Entra\^inement};
+
+  %% -- Section Multi-classes (pleine largeur) --
+  \node[anchor=west, text=themeblue, font=\small\bfseries]
+    at ([xshift=0.7cm, yshift=-1.5cm]current page.north west)
+    {Segmentation multi-classes (8 types d'anomalies)};
+  \draw[themeblue!30, line width=0.3pt]
+    ([xshift=0.7cm, yshift=-1.75cm]current page.north west)
+    -- ([xshift=15.6cm, yshift=-1.75cm]current page.north west);
+
+  \fill[themeblue!12, rounded corners=3pt]
+    ([xshift=0.7cm, yshift=-1.9cm]current page.north west)
+    rectangle ([xshift=7.4cm, yshift=-3.0cm]current page.north west);
+  \node[text=textmid, font=\tiny\bfseries]
+    at ([xshift=4.05cm, yshift=-2.15cm]current page.north west)
+    {mAP@0.5 (Mask)};
+  \node[text=themeblue, font=\Large\bfseries]
+    at ([xshift=4.05cm, yshift=-2.60cm]current page.north west)
+    {0.839};
+  \node[text=textlight, font=\tiny]
+    at ([xshift=4.05cm, yshift=-2.88cm]current page.north west)
+    {val set};
+
+  \fill[themeblue!12, rounded corners=3pt]
+    ([xshift=8.0cm, yshift=-1.9cm]current page.north west)
+    rectangle ([xshift=14.7cm, yshift=-3.0cm]current page.north west);
+  \node[text=textmid, font=\tiny\bfseries]
+    at ([xshift=11.35cm, yshift=-2.15cm]current page.north west)
+    {mAP@0.5:0.95 (Mask)};
+  \node[text=themeblue, font=\Large\bfseries]
+    at ([xshift=11.35cm, yshift=-2.60cm]current page.north west)
+    {0.507};
+  \node[text=textlight, font=\tiny]
+    at ([xshift=11.35cm, yshift=-2.88cm]current page.north west)
+    {val set};
+
+  %% -- Note courbes --
+  \fill[themebluevlight!60, rounded corners=3pt]
+    ([xshift=0.6cm, yshift=-3.2cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-4.0cm]current page.north west);
+  \node[text=textdark, font=\scriptsize, text width=14.5cm, align=center]
+    at ([xshift=8.1cm, yshift=-3.6cm]current page.north west)
+    {Les courbes d'apprentissage (box\_loss, seg\_loss, cls\_loss) montrent une convergence stable.
+     Les r\'esultats de validation sont disponibles dans \texttt{runs/segment/val/}.};
+
+  %% -- Observations --
+  \node[anchor=west, text=themebluedark, font=\small\bfseries]
+    at ([xshift=0.7cm, yshift=-4.3cm]current page.north west)
+    {Observations cl\'es :};
+
+  \node[anchor=west, text=textdark, font=\scriptsize]
+    at ([xshift=1.2cm, yshift=-4.75cm]current page.north west)
+    {\textbullet\ \ Classes rares (thread, color) : mAP plus faible, compens\'e par les poids de classes};
+  \node[anchor=west, text=textdark, font=\scriptsize]
+    at ([xshift=1.2cm, yshift=-5.15cm]current page.north west)
+    {\textbullet\ \ Fort d\'es\'equilibre : crack/hole/cut repr\'esentent $>$68\,\% des instances};
+
+\end{tikzpicture}
+\end{frame}
+
+%% ============================================================
+%%  SLIDE 7 - RESULTATS PAR CLASSE
+%% ============================================================
+\begin{frame}{07 --- R\'esultats par Classe (Multi-classes)}
+\begin{tikzpicture}[remember picture, overlay]
+  \fill[white] (current page.south west) rectangle (current page.north east);
+  \begin{scope}
+    \foreach \r/\op in {3.2/0.08, 2.4/0.11, 1.6/0.13}{
+      \fill[blobcolor, opacity=\op]
+        ([xshift=0.9cm, yshift=-0.6cm]current page.north east) circle (\r cm);
+    }
+  \end{scope}
+  \node[text=themebluelight, font=\fontsize{52}{52}\bfseries, opacity=0.25]
+    at ([xshift=-1.2cm, yshift=-0.6cm]current page.north east) {07};
+  \draw[themeblue!40, line width=0.4pt]
+    ([xshift=0.6cm, yshift=-1.0cm]current page.north west)
+    -- ([xshift=-0.6cm, yshift=-1.0cm]current page.north east);
+  \node[anchor=west, text=themebluedark, font=\large\bfseries]
+    at ([xshift=0.7cm, yshift=-0.55cm]current page.north west)
+    {07 --- R\'esultats par Classe (mAP@0.5 Mask)};
+
+  \node[anchor=west, text=textmid, font=\scriptsize\itshape]
+    at ([xshift=0.7cm, yshift=-1.25cm]current page.north west)
+    {Mod\`ele multi-classes YOLO26s-seg -- 8 types d'anomalies -- mAP@0.5 global : \textbf{0.839}};
+
+  %% En-tete tableau
+  \fill[themeblue!65, rounded corners=2pt]
+    ([xshift=0.6cm, yshift=-1.58cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-1.98cm]current page.north west);
+  \node[anchor=west, text=white, font=\scriptsize\bfseries]
+    at ([xshift=0.8cm, yshift=-1.78cm]current page.north west) {Classe (type d'anomalie)};
+  \node[text=white, font=\scriptsize\bfseries]
+    at ([xshift=7.6cm, yshift=-1.78cm]current page.north west) {N instances};
+  \node[text=white, font=\scriptsize\bfseries]
+    at ([xshift=10.0cm, yshift=-1.78cm]current page.north west) {AP@0.5};
+  \node[text=white, font=\scriptsize\bfseries]
+    at ([xshift=12.2cm, yshift=-1.78cm]current page.north west) {AP@0.5:0.95};
+  \node[text=white, font=\scriptsize\bfseries]
+    at ([xshift=14.2cm, yshift=-1.78cm]current page.north west) {Niveau};
+
+  %% Lignes alternees
+  \foreach \i/\bg in {0/8, 1/0, 2/8, 3/0, 4/8, 5/0, 6/8, 7/0}{
+    \fill[themeblue!\bg]
+      ([xshift=0.6cm, yshift={-1.98cm-\i*0.52cm}]current page.north west)
+      rectangle ([xshift=15.6cm, yshift={-2.50cm-\i*0.52cm}]current page.north west);
+  }
+
+  %% crack
+  \node[anchor=west, text=textdark, font=\scriptsize\bfseries]
+    at ([xshift=0.8cm, yshift=-2.24cm]current page.north west) {crack};
+  \node[text=textdark, font=\scriptsize]
+    at ([xshift=7.6cm, yshift=-2.24cm]current page.north west) {$\sim$310};
+  \fill[greenok!60, rounded corners=2pt]
+    ([xshift=9.2cm, yshift=-2.42cm]current page.north west)
+    rectangle ([xshift=9.2cm+1.74cm, yshift=-2.05cm]current page.north west);
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=10.0cm, yshift=-2.24cm]current page.north west) {0.58};
+  \node[text=textdark, font=\scriptsize]
+    at ([xshift=12.2cm, yshift=-2.24cm]current page.north west) {0.36};
+  \fill[greenok!50, rounded corners=1pt]
+    ([xshift=14.0cm, yshift=-2.40cm]current page.north west)
+    rectangle ([xshift=15.4cm, yshift=-2.08cm]current page.north west);
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=14.7cm, yshift=-2.24cm]current page.north west) {Bon};
+
+  %% hole
+  \node[anchor=west, text=textdark, font=\scriptsize\bfseries]
+    at ([xshift=0.8cm, yshift=-2.76cm]current page.north west) {hole};
+  \node[text=textdark, font=\scriptsize]
+    at ([xshift=7.6cm, yshift=-2.76cm]current page.north west) {$\sim$290};
+  \fill[greenok!60, rounded corners=2pt]
+    ([xshift=9.2cm, yshift=-2.94cm]current page.north west)
+    rectangle ([xshift=9.2cm+1.62cm, yshift=-2.57cm]current page.north west);
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=10.0cm, yshift=-2.76cm]current page.north west) {0.54};
+  \node[text=textdark, font=\scriptsize]
+    at ([xshift=12.2cm, yshift=-2.76cm]current page.north west) {0.33};
+  \fill[greenok!50, rounded corners=1pt]
+    ([xshift=14.0cm, yshift=-2.92cm]current page.north west)
+    rectangle ([xshift=15.4cm, yshift=-2.60cm]current page.north west);
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=14.7cm, yshift=-2.76cm]current page.north west) {Bon};
+
+  %% cut
+  \node[anchor=west, text=textdark, font=\scriptsize\bfseries]
+    at ([xshift=0.8cm, yshift=-3.28cm]current page.north west) {cut};
+  \node[text=textdark, font=\scriptsize]
+    at ([xshift=7.6cm, yshift=-3.28cm]current page.north west) {$\sim$265};
+  \fill[greenok!50, rounded corners=2pt]
+    ([xshift=9.2cm, yshift=-3.46cm]current page.north west)
+    rectangle ([xshift=9.2cm+1.53cm, yshift=-3.09cm]current page.north west);
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=10.0cm, yshift=-3.28cm]current page.north west) {0.51};
+  \node[text=textdark, font=\scriptsize]
+    at ([xshift=12.2cm, yshift=-3.28cm]current page.north west) {0.31};
+  \fill[greenok!50, rounded corners=1pt]
+    ([xshift=14.0cm, yshift=-3.44cm]current page.north west)
+    rectangle ([xshift=15.4cm, yshift=-3.12cm]current page.north west);
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=14.7cm, yshift=-3.28cm]current page.north west) {Bon};
+
+  %% bent
+  \node[anchor=west, text=textdark, font=\scriptsize\bfseries]
+    at ([xshift=0.8cm, yshift=-3.80cm]current page.north west) {bent};
+  \node[text=textdark, font=\scriptsize]
+    at ([xshift=7.6cm, yshift=-3.80cm]current page.north west) {$\sim$155};
+  \fill[themeblue!55, rounded corners=2pt]
+    ([xshift=9.2cm, yshift=-3.98cm]current page.north west)
+    rectangle ([xshift=9.2cm+1.38cm, yshift=-3.61cm]current page.north west);
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=10.0cm, yshift=-3.80cm]current page.north west) {0.46};
+  \node[text=textdark, font=\scriptsize]
+    at ([xshift=12.2cm, yshift=-3.80cm]current page.north west) {0.28};
+  \fill[themeblue!45, rounded corners=1pt]
+    ([xshift=14.0cm, yshift=-3.96cm]current page.north west)
+    rectangle ([xshift=15.4cm, yshift=-3.64cm]current page.north west);
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=14.7cm, yshift=-3.80cm]current page.north west) {Moyen};
+
+  %% scratch
+  \node[anchor=west, text=textdark, font=\scriptsize\bfseries]
+    at ([xshift=0.8cm, yshift=-4.32cm]current page.north west) {scratch};
+  \node[text=textdark, font=\scriptsize]
+    at ([xshift=7.6cm, yshift=-4.32cm]current page.north west) {$\sim$125};
+  \fill[themeblue!45, rounded corners=2pt]
+    ([xshift=9.2cm, yshift=-4.50cm]current page.north west)
+    rectangle ([xshift=9.2cm+1.20cm, yshift=-4.13cm]current page.north west);
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=10.0cm, yshift=-4.32cm]current page.north west) {0.40};
+  \node[text=textdark, font=\scriptsize]
+    at ([xshift=12.2cm, yshift=-4.32cm]current page.north west) {0.24};
+  \fill[themeblue!45, rounded corners=1pt]
+    ([xshift=14.0cm, yshift=-4.48cm]current page.north west)
+    rectangle ([xshift=15.4cm, yshift=-4.16cm]current page.north west);
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=14.7cm, yshift=-4.32cm]current page.north west) {Moyen};
+
+  %% contamination
+  \node[anchor=west, text=textdark, font=\scriptsize\bfseries]
+    at ([xshift=0.8cm, yshift=-4.84cm]current page.north west) {contamination};
+  \node[text=textdark, font=\scriptsize]
+    at ([xshift=7.6cm, yshift=-4.84cm]current page.north west) {$\sim$80};
+  \fill[orangewip!55, rounded corners=2pt]
+    ([xshift=9.2cm, yshift=-5.02cm]current page.north west)
+    rectangle ([xshift=9.2cm+0.99cm, yshift=-4.65cm]current page.north west);
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=10.0cm, yshift=-4.84cm]current page.north west) {0.33};
+  \node[text=textdark, font=\scriptsize]
+    at ([xshift=12.2cm, yshift=-4.84cm]current page.north west) {0.19};
+  \fill[orangewip!50, rounded corners=1pt]
+    ([xshift=14.0cm, yshift=-5.00cm]current page.north west)
+    rectangle ([xshift=15.4cm, yshift=-4.68cm]current page.north west);
+  \node[text=textdark, font=\tiny\bfseries]
+    at ([xshift=14.7cm, yshift=-4.84cm]current page.north west) {Faible};
+
+  %% thread
+  \node[anchor=west, text=textdark, font=\scriptsize\bfseries]
+    at ([xshift=0.8cm, yshift=-5.36cm]current page.north west) {thread};
+  \node[text=textdark, font=\scriptsize]
+    at ([xshift=7.6cm, yshift=-5.36cm]current page.north west) {$\sim$38};
+  \fill[reddanger!40, rounded corners=2pt]
+    ([xshift=9.2cm, yshift=-5.54cm]current page.north west)
+    rectangle ([xshift=9.2cm+0.60cm, yshift=-5.17cm]current page.north west);
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=10.0cm, yshift=-5.36cm]current page.north west) {0.20};
+  \node[text=textdark, font=\scriptsize]
+    at ([xshift=12.2cm, yshift=-5.36cm]current page.north west) {0.11};
+  \fill[reddanger!35, rounded corners=1pt]
+    ([xshift=14.0cm, yshift=-5.52cm]current page.north west)
+    rectangle ([xshift=15.4cm, yshift=-5.20cm]current page.north west);
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=14.7cm, yshift=-5.36cm]current page.north west) {Rare};
+
+  %% color
+  \node[anchor=west, text=textdark, font=\scriptsize\bfseries]
+    at ([xshift=0.8cm, yshift=-5.88cm]current page.north west) {color};
+  \node[text=textdark, font=\scriptsize]
+    at ([xshift=7.6cm, yshift=-5.88cm]current page.north west) {$\sim$30};
+  \fill[reddanger!30, rounded corners=2pt]
+    ([xshift=9.2cm, yshift=-6.06cm]current page.north west)
+    rectangle ([xshift=9.2cm+0.48cm, yshift=-5.69cm]current page.north west);
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=10.0cm, yshift=-5.88cm]current page.north west) {0.16};
+  \node[text=textdark, font=\scriptsize]
+    at ([xshift=12.2cm, yshift=-5.88cm]current page.north west) {0.09};
+  \fill[reddanger!30, rounded corners=1pt]
+    ([xshift=14.0cm, yshift=-6.04cm]current page.north west)
+    rectangle ([xshift=15.4cm, yshift=-5.72cm]current page.north west);
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=14.7cm, yshift=-5.88cm]current page.north west) {Rare};
+
+  %% Observation
+  \fill[themebluevlight!60, rounded corners=3pt]
+    ([xshift=0.6cm, yshift=-6.23cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-6.93cm]current page.north west);
+  \node[anchor=west, text=textdark, font=\scriptsize, text width=14.5cm]
+    at ([xshift=0.8cm, yshift=-6.58cm]current page.north west)
+    {\textbf{Observation :} Corr\'elation directe entre fr\'equence de classe et AP.
+     Les classes rares (\textit{thread}, \textit{color}) ont un AP jusqu'\`a 3.6$\times$ inf\'erieur aux classes
+     fr\'equentes --- justifie l'utilisation des poids de classes et l'augmentation cibl\'ee.
+     \textit{Remplacer les valeurs par les r\'esultats r\'eels du fichier \texttt{results.csv}.}};
+
+\end{tikzpicture}
+\end{frame}
+
+%% ============================================================
+%%  SLIDE 7b - VISUALISATION DES ANOMALIES
+%% ============================================================
+\begin{frame}{07 --- Visualisation des Pr\'edictions}
+\begin{tikzpicture}[remember picture, overlay]
+  \fill[white] (current page.south west) rectangle (current page.north east);
+
+  \begin{scope}
+    \foreach \r/\op in {3.2/0.08, 2.4/0.11, 1.6/0.13}{
+      \fill[blobcolor, opacity=\op]
+        ([xshift=0.9cm, yshift=-0.6cm]current page.north east) circle (\r cm);
+    }
+  \end{scope}
+
+  \draw[themeblue!40, line width=0.4pt]
+    ([xshift=0.6cm, yshift=-1.0cm]current page.north west)
+    -- ([xshift=-0.6cm, yshift=-1.0cm]current page.north east);
+  \node[anchor=west, text=themebluedark, font=\large\bfseries]
+    at ([xshift=0.7cm, yshift=-0.55cm]current page.north west)
+    {04 --- Visualisation des Pr\'edictions};
+
+  %% Grille de 3x2 images (placeholders avec noms)
+  %% Ligne 1
+  \fill[lightbg, rounded corners=2pt]
+    ([xshift=0.6cm, yshift=-1.3cm]current page.north west)
+    rectangle ([xshift=5.3cm, yshift=-3.4cm]current page.north west);
+  \node[text=textmid, font=\tiny\bfseries]
+    at ([xshift=2.95cm, yshift=-2.35cm]current page.north west)
+    {bagel -- crack};
+  \node[text=textlight, font=\tiny, align=center]
+    at ([xshift=2.95cm, yshift=-2.85cm]current page.north west)
+    {\texttt{resultats/bagel\_crack.png}};
+
+  \fill[lightbg, rounded corners=2pt]
+    ([xshift=5.7cm, yshift=-1.3cm]current page.north west)
+    rectangle ([xshift=10.4cm, yshift=-3.4cm]current page.north west);
+  \node[text=textmid, font=\tiny\bfseries]
+    at ([xshift=8.05cm, yshift=-2.35cm]current page.north west)
+    {cable\_gland -- bent};
+  \node[text=textlight, font=\tiny, align=center]
+    at ([xshift=8.05cm, yshift=-2.85cm]current page.north west)
+    {\texttt{resultats/cable\_gland\_bent.png}};
+
+  \fill[lightbg, rounded corners=2pt]
+    ([xshift=10.8cm, yshift=-1.3cm]current page.north west)
+    rectangle ([xshift=15.5cm, yshift=-3.4cm]current page.north west);
+  \node[text=textmid, font=\tiny\bfseries]
+    at ([xshift=13.15cm, yshift=-2.35cm]current page.north west)
+    {carrot -- contamination};
+  \node[text=textlight, font=\tiny, align=center]
+    at ([xshift=13.15cm, yshift=-2.85cm]current page.north west)
+    {\texttt{resultats/carrot\_contamination.png}};
+
+  %% Ligne 2
+  \fill[lightbg, rounded corners=2pt]
+    ([xshift=0.6cm, yshift=-3.7cm]current page.north west)
+    rectangle ([xshift=5.3cm, yshift=-5.7cm]current page.north west);
+  \node[text=textmid, font=\tiny\bfseries]
+    at ([xshift=2.95cm, yshift=-4.70cm]current page.north west)
+    {cookie -- crack};
+  \node[text=textlight, font=\tiny, align=center]
+    at ([xshift=2.95cm, yshift=-5.10cm]current page.north west)
+    {\texttt{resultats/cookie\_crack.png}};
+
+  \fill[lightbg, rounded corners=2pt]
+    ([xshift=5.7cm, yshift=-3.7cm]current page.north west)
+    rectangle ([xshift=10.4cm, yshift=-5.7cm]current page.north west);
+  \node[text=textmid, font=\tiny\bfseries]
+    at ([xshift=8.05cm, yshift=-4.70cm]current page.north west)
+    {foam -- cut};
+  \node[text=textlight, font=\tiny, align=center]
+    at ([xshift=8.05cm, yshift=-5.10cm]current page.north west)
+    {\texttt{resultats/foam\_cut.png}};
+
+  \fill[lightbg, rounded corners=2pt]
+    ([xshift=10.8cm, yshift=-3.7cm]current page.north west)
+    rectangle ([xshift=15.5cm, yshift=-5.7cm]current page.north west);
+  \node[text=textmid, font=\tiny\bfseries]
+    at ([xshift=13.15cm, yshift=-4.70cm]current page.north west)
+    {tire -- scratch};
+  \node[text=textlight, font=\tiny, align=center]
+    at ([xshift=13.15cm, yshift=-5.10cm]current page.north west)
+    {\texttt{resultats/tire\_scratch.png}};
+
+  %% Note en bas
+  \node[text=textlight, font=\tiny\itshape, align=center]
+    at ([xshift=8.1cm, yshift=0.35cm]current page.south)
+    {Remplacer les blocs gris par les images r\'eelles avec \texttt{\textbackslash includegraphics}};
+
+\end{tikzpicture}
+\end{frame}
+
+%% ============================================================
+%%  SLIDE 8 - DIFFICULTES & SOLUTIONS
+%% ============================================================
+\begin{frame}{05 --- Difficult\'es \& Solutions}
+\begin{tikzpicture}[remember picture, overlay]
+  \fill[white] (current page.south west) rectangle (current page.north east);
+
+  \begin{scope}
+    \foreach \r/\op in {3.2/0.08, 2.4/0.11, 1.6/0.13}{
+      \fill[blobcolor, opacity=\op]
+        ([xshift=0.9cm, yshift=-0.6cm]current page.north east) circle (\r cm);
+    }
+  \end{scope}
+  \node[text=themebluelight, font=\fontsize{52}{52}\bfseries, opacity=0.25]
+    at ([xshift=-1.2cm, yshift=-0.6cm]current page.north east) {05};
+
+  \draw[themeblue!40, line width=0.4pt]
+    ([xshift=0.6cm, yshift=-1.0cm]current page.north west)
+    -- ([xshift=-0.6cm, yshift=-1.0cm]current page.north east);
+  \node[anchor=west, text=themebluedark, font=\large\bfseries]
+    at ([xshift=0.7cm, yshift=-0.55cm]current page.north west)
+    {05 --- Difficult\'es \& Solutions};
+
+  %% Difficulte 1
+  \fill[reddanger!10, rounded corners=3pt]
+    ([xshift=0.6cm, yshift=-1.35cm]current page.north west)
+    rectangle ([xshift=7.8cm, yshift=-2.35cm]current page.north west);
+  \node[anchor=west, text=reddanger, font=\scriptsize\bfseries]
+    at ([xshift=0.9cm, yshift=-1.65cm]current page.north west)
+    {\faTimes\ \ D\'es\'equilibre des classes};
+  \node[anchor=west, text=textdark, font=\scriptsize, text width=6.5cm]
+    at ([xshift=0.9cm, yshift=-2.05cm]current page.north west)
+    {Certains types (thread, color) 10$\times$ moins fr\'equents};
+
+  \fill[greenok!10, rounded corners=3pt]
+    ([xshift=8.2cm, yshift=-1.35cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-2.35cm]current page.north west);
+  \node[anchor=west, text=greenok, font=\scriptsize\bfseries]
+    at ([xshift=8.5cm, yshift=-1.65cm]current page.north west)
+    {\faCheck\ \ Poids de classes inversement proportionnels};
+  \node[anchor=west, text=textdark, font=\scriptsize, text width=6.5cm]
+    at ([xshift=8.5cm, yshift=-2.05cm]current page.north west)
+    {Calcul automatique : $w_c = 1/freq_c$, normalisation m\'ediane=1};
+
+  %% Difficulte 2
+  \fill[reddanger!10, rounded corners=3pt]
+    ([xshift=0.6cm, yshift=-2.6cm]current page.north west)
+    rectangle ([xshift=7.8cm, yshift=-3.6cm]current page.north west);
+  \node[anchor=west, text=reddanger, font=\scriptsize\bfseries]
+    at ([xshift=0.9cm, yshift=-2.90cm]current page.north west)
+    {\faTimes\ \ Dataset de petite taille};
+  \node[anchor=west, text=textdark, font=\scriptsize, text width=6.5cm]
+    at ([xshift=0.9cm, yshift=-3.30cm]current page.north west)
+    {$\sim$1258 images anomales insuffisantes pour YOLO};
+
+  \fill[greenok!10, rounded corners=3pt]
+    ([xshift=8.2cm, yshift=-2.6cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-3.6cm]current page.north west);
+  \node[anchor=west, text=greenok, font=\scriptsize\bfseries]
+    at ([xshift=8.5cm, yshift=-2.90cm]current page.north west)
+    {\faCheck\ \ Augmentation offline (Albumentations)};
+  \node[anchor=west, text=textdark, font=\scriptsize, text width=6.5cm]
+    at ([xshift=8.5cm, yshift=-3.30cm]current page.north west)
+    {Flip, rotation, bruit, flou, distorsion : 6290 images};
+
+  %% Difficulte 3
+  \fill[reddanger!10, rounded corners=3pt]
+    ([xshift=0.6cm, yshift=-3.85cm]current page.north west)
+    rectangle ([xshift=7.8cm, yshift=-4.85cm]current page.north west);
+  \node[anchor=west, text=reddanger, font=\scriptsize\bfseries]
+    at ([xshift=0.9cm, yshift=-4.15cm]current page.north west)
+    {\faTimes\ \ Format donn\'ees 3D (XYZ)};
+  \node[anchor=west, text=textdark, font=\scriptsize, text width=6.5cm]
+    at ([xshift=0.9cm, yshift=-4.55cm]current page.north west)
+    {Nuages de points XYZ non directement exploitables};
+
+  \fill[greenok!10, rounded corners=3pt]
+    ([xshift=8.2cm, yshift=-3.85cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-4.85cm]current page.north west);
+  \node[anchor=west, text=greenok, font=\scriptsize\bfseries]
+    at ([xshift=8.5cm, yshift=-4.15cm]current page.north west)
+    {\faCheck\ \ Utilisation unique du canal RGB};
+  \node[anchor=west, text=textdark, font=\scriptsize, text width=6.5cm]
+    at ([xshift=8.5cm, yshift=-4.55cm]current page.north west)
+    {Focus sur la d\'etection visuelle; XYZ r\'eserv\'e aux prochaines \'etapes};
+
+  %% Difficulte 4
+  \fill[reddanger!10, rounded corners=3pt]
+    ([xshift=0.6cm, yshift=-5.1cm]current page.north west)
+    rectangle ([xshift=7.8cm, yshift=-6.0cm]current page.north west);
+  \node[anchor=west, text=reddanger, font=\scriptsize\bfseries]
+    at ([xshift=0.9cm, yshift=-5.38cm]current page.north west)
+    {\faTimes\ \ Labels polygonaux bruités};
+  \node[anchor=west, text=textdark, font=\scriptsize, text width=6.5cm]
+    at ([xshift=0.9cm, yshift=-5.75cm]current page.north west)
+    {Masques GT complexes $\to$ polygones approxim\'es};
+
+  \fill[greenok!10, rounded corners=3pt]
+    ([xshift=8.2cm, yshift=-5.1cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-6.0cm]current page.north west);
+  \node[anchor=west, text=greenok, font=\scriptsize\bfseries]
+    at ([xshift=8.5cm, yshift=-5.38cm]current page.north west)
+    {\faCheck\ \ OpenCV contourApprox + normalisation YOLO};
+  \node[anchor=west, text=textdark, font=\scriptsize, text width=6.5cm]
+    at ([xshift=8.5cm, yshift=-5.75cm]current page.north west)
+    {Pipeline robuste de conversion masque $\to$ label YOLO};
+
+\end{tikzpicture}
+\end{frame}
+
+%% ============================================================
+%%  SLIDE 9 - PLANNING
+%% ============================================================
+\begin{frame}{08 --- Perspectives \& \'Etat d'Avancement}
+\begin{tikzpicture}[remember picture, overlay]
+  \fill[white] (current page.south west) rectangle (current page.north east);
+
+  \begin{scope}
+    \foreach \r/\op in {3.2/0.08, 2.4/0.11, 1.6/0.13}{
+      \fill[blobcolor, opacity=\op]
+        ([xshift=0.9cm, yshift=-0.6cm]current page.north east) circle (\r cm);
+    }
+  \end{scope}
+  \node[text=themebluelight, font=\fontsize{52}{52}\bfseries, opacity=0.25]
+    at ([xshift=-1.2cm, yshift=-0.6cm]current page.north east) {08};
+
+  \draw[themeblue!40, line width=0.4pt]
+    ([xshift=0.6cm, yshift=-1.0cm]current page.north west)
+    -- ([xshift=-0.6cm, yshift=-1.0cm]current page.north east);
+  \node[anchor=west, text=themebluedark, font=\large\bfseries]
+    at ([xshift=0.7cm, yshift=-0.55cm]current page.north west)
+    {08 --- Perspectives \& \'Etat d'Avancement};
+
+  %% Legende
+  \fill[greenok!70, rounded corners=2pt]
+    ([xshift=0.7cm, yshift=-1.3cm]current page.north west)
+    rectangle ([xshift=1.5cm, yshift=-1.6cm]current page.north west);
+  \node[anchor=west, text=textdark, font=\tiny]
+    at ([xshift=1.6cm, yshift=-1.45cm]current page.north west) {Termin\'e};
+
+  \fill[orangewip!70, rounded corners=2pt]
+    ([xshift=3.5cm, yshift=-1.3cm]current page.north west)
+    rectangle ([xshift=4.3cm, yshift=-1.6cm]current page.north west);
+  \node[anchor=west, text=textdark, font=\tiny]
+    at ([xshift=4.4cm, yshift=-1.45cm]current page.north west) {En cours};
+
+  \fill[themebluelight!70, rounded corners=2pt]
+    ([xshift=6.3cm, yshift=-1.3cm]current page.north west)
+    rectangle ([xshift=7.1cm, yshift=-1.6cm]current page.north west);
+  \node[anchor=west, text=textdark, font=\tiny]
+    at ([xshift=7.2cm, yshift=-1.45cm]current page.north west) {\`A faire};
+
+  %% Colonne Gauche
+  %% Tache 1
+  \fill[greenok!20, rounded corners=3pt]
+    ([xshift=0.6cm, yshift=-1.9cm]current page.north west)
+    rectangle ([xshift=7.5cm, yshift=-2.55cm]current page.north west);
+  \fill[greenok!70, rounded corners=2pt]
+    ([xshift=0.6cm, yshift=-1.9cm]current page.north west)
+    rectangle ([xshift=1.6cm, yshift=-2.55cm]current page.north west);
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=1.1cm, yshift=-2.23cm]current page.north west) {T1};
+  \node[anchor=west, text=textdark, font=\scriptsize\bfseries]
+    at ([xshift=1.75cm, yshift=-2.10cm]current page.north west)
+    {Exploration \& EDA MVTec 3D-AD};
+  \node[anchor=west, text=textmid, font=\tiny]
+    at ([xshift=1.75cm, yshift=-2.42cm]current page.north west)
+    {Analyse distribution, cat\'egories, types de d\'efauts};
+
+  %% Tache 2
+  \fill[greenok!20, rounded corners=3pt]
+    ([xshift=0.6cm, yshift=-2.75cm]current page.north west)
+    rectangle ([xshift=7.5cm, yshift=-3.40cm]current page.north west);
+  \fill[greenok!70, rounded corners=2pt]
+    ([xshift=0.6cm, yshift=-2.75cm]current page.north west)
+    rectangle ([xshift=1.6cm, yshift=-3.40cm]current page.north west);
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=1.1cm, yshift=-3.08cm]current page.north west) {T2};
+  \node[anchor=west, text=textdark, font=\scriptsize\bfseries]
+    at ([xshift=1.75cm, yshift=-2.95cm]current page.north west)
+    {Construction dataset YOLO};
+  \node[anchor=west, text=textmid, font=\tiny]
+    at ([xshift=1.75cm, yshift=-3.27cm]current page.north west)
+    {Masques GT $\to$ polygones $\to$ labels .txt normalis\'es};
+
+  %% Tache 3
+  \fill[greenok!20, rounded corners=3pt]
+    ([xshift=0.6cm, yshift=-3.60cm]current page.north west)
+    rectangle ([xshift=7.5cm, yshift=-4.25cm]current page.north west);
+  \fill[greenok!70, rounded corners=2pt]
+    ([xshift=0.6cm, yshift=-3.60cm]current page.north west)
+    rectangle ([xshift=1.6cm, yshift=-4.25cm]current page.north west);
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=1.1cm, yshift=-3.93cm]current page.north west) {T3};
+  \node[anchor=west, text=textdark, font=\scriptsize\bfseries]
+    at ([xshift=1.75cm, yshift=-3.80cm]current page.north west)
+    {Augmentation \& entra\^inement multi-classes};
+  \node[anchor=west, text=textmid, font=\tiny]
+    at ([xshift=1.75cm, yshift=-4.12cm]current page.north west)
+    {Albumentations + YOLO26s-seg, 150 epochs};
+
+  %% Tache 4
+  \fill[greenok!20, rounded corners=3pt]
+    ([xshift=0.6cm, yshift=-4.45cm]current page.north west)
+    rectangle ([xshift=7.5cm, yshift=-5.10cm]current page.north west);
+  \fill[greenok!70, rounded corners=2pt]
+    ([xshift=0.6cm, yshift=-4.45cm]current page.north west)
+    rectangle ([xshift=1.6cm, yshift=-5.10cm]current page.north west);
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=1.1cm, yshift=-4.78cm]current page.north west) {T4};
+  \node[anchor=west, text=textdark, font=\scriptsize\bfseries]
+    at ([xshift=1.75cm, yshift=-4.65cm]current page.north west)
+    {Entra\^inement multi-classes};
+  \node[anchor=west, text=textmid, font=\tiny]
+    at ([xshift=1.75cm, yshift=-4.97cm]current page.north west)
+    {8 classes, poids inverses, run mvtec3d\_anomaly\_type3};
+
+  %% Colonne Droite
+  %% Tache 5
+  \fill[orangewip!20, rounded corners=3pt]
+    ([xshift=8.1cm, yshift=-1.9cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-2.55cm]current page.north west);
+  \fill[orangewip!70, rounded corners=2pt]
+    ([xshift=8.1cm, yshift=-1.9cm]current page.north west)
+    rectangle ([xshift=9.1cm, yshift=-2.55cm]current page.north west);
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=8.6cm, yshift=-2.23cm]current page.north west) {T5};
+  \node[anchor=west, text=textdark, font=\scriptsize\bfseries]
+    at ([xshift=9.25cm, yshift=-2.10cm]current page.north west)
+    {Am\'elioration des r\'esultats};
+  \node[anchor=west, text=textmid, font=\tiny]
+    at ([xshift=9.25cm, yshift=-2.42cm]current page.north west)
+    {Tuning hyperparamatres, data cleaning, augmentation ciblee};
+
+  %% Tache 6
+  \fill[themebluelight!20, rounded corners=3pt]
+    ([xshift=8.1cm, yshift=-2.75cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-3.40cm]current page.north west);
+  \fill[themebluelight!70, rounded corners=2pt]
+    ([xshift=8.1cm, yshift=-2.75cm]current page.north west)
+    rectangle ([xshift=9.1cm, yshift=-3.40cm]current page.north west);
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=8.6cm, yshift=-3.08cm]current page.north west) {T6};
+  \node[anchor=west, text=textdark, font=\scriptsize\bfseries]
+    at ([xshift=9.25cm, yshift=-2.95cm]current page.north west)
+    {Int\'egration des donn\'ees XYZ};
+  \node[anchor=west, text=textmid, font=\tiny]
+    at ([xshift=9.25cm, yshift=-3.27cm]current page.north west)
+    {Fusion RGB+3D pour am\'eliorer la d\'etection};
+
+  %% Tache 7
+  \fill[themebluelight!20, rounded corners=3pt]
+    ([xshift=8.1cm, yshift=-3.60cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-4.25cm]current page.north west);
+  \fill[themebluelight!70, rounded corners=2pt]
+    ([xshift=8.1cm, yshift=-3.60cm]current page.north west)
+    rectangle ([xshift=9.1cm, yshift=-4.25cm]current page.north west);
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=8.6cm, yshift=-3.93cm]current page.north west) {T7};
+  \node[anchor=west, text=textdark, font=\scriptsize\bfseries]
+    at ([xshift=9.25cm, yshift=-3.80cm]current page.north west)
+    {D\'eploiement et interface de d\'emonstration};
+  \node[anchor=west, text=textmid, font=\tiny]
+    at ([xshift=9.25cm, yshift=-4.12cm]current page.north west)
+    {API FastAPI + interface de visualisation};
+
+\end{tikzpicture}
+\end{frame}
+
+%% ============================================================
+%%  SLIDE 10 - CONCLUSION
+%% ============================================================
+\begin{frame}{Conclusion \& Prochaines \'Etapes}
+\begin{tikzpicture}[remember picture, overlay]
+  \fill[white] (current page.south west) rectangle (current page.north east);
+
+  \begin{scope}
+    \foreach \r/\op in {3.2/0.08, 2.4/0.11, 1.6/0.13}{
+      \fill[blobcolor, opacity=\op]
+        ([xshift=0.9cm, yshift=-0.6cm]current page.north east) circle (\r cm);
+    }
+  \end{scope}
+
+  \draw[themeblue!40, line width=0.4pt]
+    ([xshift=0.6cm, yshift=-1.0cm]current page.north west)
+    -- ([xshift=-0.6cm, yshift=-1.0cm]current page.north east);
+  \node[anchor=west, text=themebluedark, font=\large\bfseries]
+    at ([xshift=0.7cm, yshift=-0.55cm]current page.north west)
+    {Conclusion \& Prochaines \'Etapes};
+
+  %% -- Ce qui a ete realise --
+  \fill[themeblue!12, rounded corners=4pt]
+    ([xshift=0.6cm, yshift=-1.35cm]current page.north west)
+    rectangle ([xshift=7.8cm, yshift=-5.5cm]current page.north west);
+  \fill[themeblue!60, rounded corners=3pt]
+    ([xshift=0.6cm, yshift=-1.35cm]current page.north west)
+    rectangle ([xshift=7.8cm, yshift=-1.8cm]current page.north west);
+  \node[text=white, font=\small\bfseries]
+    at ([xshift=4.2cm, yshift=-1.58cm]current page.north west)
+    {\faCheckCircle\ \ R\'ealis\'e};
+
+  \node[anchor=west, text=textdark, font=\scriptsize]
+    at ([xshift=1.0cm, yshift=-2.2cm]current page.north west)
+    {\textbullet\ \ EDA compl\`ete sur les 10 cat\'egories MVTec 3D-AD};
+  \node[anchor=west, text=textdark, font=\scriptsize]
+    at ([xshift=1.0cm, yshift=-2.7cm]current page.north west)
+    {\textbullet\ \ Pipeline de conversion masques $\to$ labels YOLO};
+  \node[anchor=west, text=textdark, font=\scriptsize]
+    at ([xshift=1.0cm, yshift=-3.2cm]current page.north west)
+    {\textbullet\ \ Augmentation offline avec Albumentations};
+  \node[anchor=west, text=textdark, font=\scriptsize]
+    at ([xshift=1.0cm, yshift=-3.7cm]current page.north west)
+    {\textbullet\ \ Entra\^inement YOLO26s-seg multi-classes (8 types, 150 epochs)};
+  \node[anchor=west, text=textdark, font=\scriptsize]
+    at ([xshift=1.0cm, yshift=-4.2cm]current page.north west)
+    {\textbullet\ \ Gestion du d\'es\'equilibre par poids de classes};
+  \node[anchor=west, text=textdark, font=\scriptsize]
+    at ([xshift=1.0cm, yshift=-4.7cm]current page.north west)
+    {\textbullet\ \ \'Evaluation : mAP@0.5 (Mask) = 0.839 --- mAP@0.5:0.95 = 0.507};
+
+  %% -- Prochaines etapes --
+  \fill[orangewip!12, rounded corners=4pt]
+    ([xshift=8.2cm, yshift=-1.35cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-5.5cm]current page.north west);
+  \fill[orangewip!60, rounded corners=3pt]
+    ([xshift=8.2cm, yshift=-1.35cm]current page.north west)
+    rectangle ([xshift=15.6cm, yshift=-1.8cm]current page.north west);
+  \node[text=white, font=\small\bfseries]
+    at ([xshift=11.9cm, yshift=-1.58cm]current page.north west)
+    {\faArrowRight\ \ Prochaines \'etapes};
+
+  \node[anchor=west, text=textdark, font=\scriptsize]
+    at ([xshift=8.5cm, yshift=-2.2cm]current page.north west)
+    {\textbullet\ \ Optimiser mAP multi-classes (tuning LR, scheduler)};
+  \node[anchor=west, text=textdark, font=\scriptsize]
+    at ([xshift=8.5cm, yshift=-2.7cm]current page.north west)
+    {\textbullet\ \ Int\'egrer les donn\'ees XYZ (fusion RGB+3D)};
+  \node[anchor=west, text=textdark, font=\scriptsize]
+    at ([xshift=8.5cm, yshift=-3.2cm]current page.north west)
+    {\textbullet\ \ Tester YOLO26s/m-seg (mod\`ele plus grand)};
+  \node[anchor=west, text=textdark, font=\scriptsize]
+    at ([xshift=8.5cm, yshift=-3.7cm]current page.north west)
+    {\textbullet\ \ Benchmark vs. m\'ethodes anomaly detection classiques};
+  \node[anchor=west, text=textdark, font=\scriptsize]
+    at ([xshift=8.5cm, yshift=-4.2cm]current page.north west)
+    {\textbullet\ \ D\'eploiement edge (ONNX/TensorRT) sur cam\'era indus.};
+  \node[anchor=west, text=textdark, font=\scriptsize]
+    at ([xshift=8.5cm, yshift=-4.7cm]current page.north west)
+    {\textbullet\ \ R\'edaction du rapport final PFE};
+
+\end{tikzpicture}
+\end{frame}
+
+%% ============================================================
+%%  SLIDE 26 - MERCI
+%% ============================================================
+{
+\setbeamertemplate{footline}{}
+\setbeamertemplate{frametitle}{}
+\begin{frame}[plain]
+\begin{tikzpicture}[remember picture, overlay]
+
+  \fill[white] (current page.south west) rectangle (current page.north east);
+
+  \begin{scope}
+    \foreach \r/\op in {4.0/0.09, 3.2/0.13, 2.5/0.17, 1.8/0.20, 1.1/0.15}{
+      \fill[blobcolor, opacity=\op]
+        ([xshift=1.5cm, yshift=-1.0cm]current page.north east) circle (\r cm);
+    }
+  \end{scope}
+  \begin{scope}
+    \foreach \r/\op in {2.5/0.08, 1.8/0.11, 1.1/0.14}{
+      \fill[blobcolor, opacity=\op]
+        ([xshift=0.8cm, yshift=0.8cm]current page.south west) circle (\r cm);
+    }
+  \end{scope}
+
+  %% Texte central
+  \node[text=themebluedark, font=\fontsize{32}{38}\bfseries]
+    at ([xshift=0cm, yshift=0.8cm]current page.center)
+    {Merci pour votre attention};
+
+  \draw[themeblue!50, line width=1pt]
+    ([xshift=-4cm, yshift=0.1cm]current page.center)
+    -- ([xshift=4cm, yshift=0.1cm]current page.center);
+
+  \node[text=themeblue, font=\large\itshape]
+    at ([xshift=0cm, yshift=-0.5cm]current page.center)
+    {Questions ?};
+
+  %% Info auteur
+  \node[text=textmid, font=\small]
+    at ([xshift=0cm, yshift=-1.6cm]current page.center)
+    {Imad Sanoussi\ \ \textbullet\ \ D\'etection d'Anomalies Industrielles -- YOLO26 sur MVTec 3D-AD};
+
+  \node[text=textlight, font=\footnotesize]
+    at ([xshift=0cm, yshift=-2.2cm]current page.center)
+    {Master Data Science\ \ \textbullet\ \ FSAC 2025--2026};
+
+  %% Pastille page
+  \fill[themeblue] ([xshift=-0.5cm, yshift=0.15cm]current page.south east) circle (0.18cm);
+  \node[text=white, font=\tiny\bfseries]
+    at ([xshift=-0.5cm, yshift=0.15cm]current page.south east) {26};
+
+\end{tikzpicture}
+\end{frame}
+}
+
+\end{document}

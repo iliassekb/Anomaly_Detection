@@ -11,9 +11,9 @@ interface Props {
 
 export default function DetectionResults({ detections, inference_ms, is_anomaly }: Props) {
   /* Group by class */
-  const grouped: Record<string, { count: number; maxConf: number }> = {}
+  const grouped: Record<string, { count: number; maxConf: number; isGood: boolean }> = {}
   detections.forEach((d) => {
-    if (!grouped[d.class]) grouped[d.class] = { count: 0, maxConf: 0 }
+    if (!grouped[d.class]) grouped[d.class] = { count: 0, maxConf: 0, isGood: d.class.toLowerCase() === "good" }
     grouped[d.class].count++
     grouped[d.class].maxConf = Math.max(grouped[d.class].maxConf, d.conf)
   })
@@ -21,6 +21,7 @@ export default function DetectionResults({ detections, inference_ms, is_anomaly 
   const chartData = entries.map(([name, g]) => ({
     name: name.charAt(0).toUpperCase() + name.slice(1),
     value: Math.round(g.maxConf * 100),
+    isGood: g.isGood,
   }))
 
   return (
@@ -40,7 +41,9 @@ export default function DetectionResults({ detections, inference_ms, is_anomaly 
             style={{ background: is_anomaly ? "var(--danger)" : "var(--success)" }} />
           <span style={{ fontSize: 13, fontWeight: 600, color: is_anomaly ? "var(--danger)" : "var(--success)" }}>
             {is_anomaly
-              ? `Defect detected — ${entries.map(([c, g]) => `${c} ×${g.count}`).join(", ")}`
+              ? `Defect detected — ${entries.filter(([, g]) => !g.isGood).map(([c, g]) => `${c} ×${g.count}`).join(", ")}`
+              : entries.length > 0
+              ? `Normal — ${entries.map(([c, g]) => `${c} ×${g.count}`).join(", ")}`
               : "No defects detected"}
           </span>
         </div>
@@ -102,8 +105,8 @@ export default function DetectionResults({ detections, inference_ms, is_anomaly 
                   cursor={{ fill: "var(--surface-alt)" }}
                 />
                 <Bar dataKey="value" radius={[2, 2, 0, 0]}>
-                  {chartData.map((_, i) => (
-                    <Cell key={i} fill="var(--danger)" opacity={0.85} />
+                  {chartData.map((entry, i) => (
+                    <Cell key={i} fill={entry.isGood ? "var(--success)" : "var(--danger)"} opacity={0.85} />
                   ))}
                 </Bar>
               </BarChart>
