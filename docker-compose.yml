@@ -65,13 +65,14 @@ services:
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
       MINIO_BUCKET: defectvision
-      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MLFLOW_TRACKING_URI: sqlite:////mlflow/mlflow.db
       MLFLOW_S3_ENDPOINT_URL: http://minio:9000
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin
     volumes:
       - ./weights:/app/weights   # model weights (persisted on host)
       - ./api:/app/api           # live-reload during development
+      - mlflow_data:/mlflow      # shared MLflow tracking DB
     depends_on:
       minio:
         condition: service_healthy

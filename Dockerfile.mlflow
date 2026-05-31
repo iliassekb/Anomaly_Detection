@@ -8,4 +8,5 @@ CMD ["mlflow", "server", \
      "--backend-store-uri", "sqlite:////mlflow/mlflow.db", \
      "--default-artifact-root", "s3://defectvision-mlflow", \
      "--host", "0.0.0.0", \
-     "--port", "5000"]
+     "--port", "5000", \
+     "--gunicorn-opts", "--forwarded-allow-ips='*'"]

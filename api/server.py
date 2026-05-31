@@ -36,6 +36,11 @@ def startup():
     except Exception as e:
         import logging
         logging.warning(f"MinIO init skipped: {e}")
+    try:
+        from api.training import cleanup_stale_runs
+        cleanup_stale_runs()
+    except Exception:
+        pass
 
 from api.dataset import router as dataset_router
 from api.sam import router as sam_router

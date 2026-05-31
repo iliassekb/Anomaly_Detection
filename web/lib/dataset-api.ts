@@ -26,6 +26,8 @@ export interface TrainingStatus {
   total_epochs: number
   run_id: string | null
   error: string | null
+  stop_requested: boolean
+  current_metrics: Record<string, number>
 }
 
 export interface TrainingRun {
@@ -180,6 +182,14 @@ export async function triggerTraining(): Promise<void> {
   if (!res.ok) throw new Error(await res.text())
 }
 
+export async function stopTraining(): Promise<void> {
+  const res = await fetch(`${API_URL}/api/training/stop`, {
+    method: "POST",
+    signal: AbortSignal.timeout(10_000),
+  })
+  if (!res.ok) throw new Error(await res.text())
+}
+
 export async function getTrainingRuns(): Promise<TrainingRun[]> {
   const res = await fetch(`${API_URL}/api/training/runs`, {
     signal: AbortSignal.timeout(10_000),
@@ -187,6 +197,16 @@ export async function getTrainingRuns(): Promise<TrainingRun[]> {
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const data = await res.json()
   return data.runs
+}
+
+export async function getRunMetricHistory(
+  runId: string,
+): Promise<{ run_id: string; history: Record<string, { step: number; value: number }[]> }> {
+  const res = await fetch(`${API_URL}/api/training/runs/${runId}/metric-history`, {
+    signal: AbortSignal.timeout(15_000),
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
 }
 
 export async function activateRun(runId: string): Promise<void> {
