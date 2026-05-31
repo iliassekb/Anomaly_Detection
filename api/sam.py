@@ -1,6 +1,6 @@
 """
-MobileSAM endpoint — single click → polygon contour.
-Lazy-loads the model and auto-downloads weights from HuggingFace on first use.
+MobileSAM endpoint — multi-point prompting → polygon contour.
+Supports positive (label=1) and negative (label=0) points to refine the mask.
 """
 
 import base64
@@ -61,18 +61,19 @@ def _mask_to_polygon(mask: np.ndarray, img_w: int, img_h: int) -> list[list[floa
 @router.post("/segment")
 def segment(payload: dict):
     """
-    Input:  { image_b64: str, x: float, y: float }
-            x, y are pixel coordinates in the original image.
+    Input:  {
+      image_b64: str,
+      points: [{ x: float, y: float, label: int }]
+              label 1 = foreground (extend), 0 = background (reduce)
+    }
     Output: { polygon: [[x_norm, y_norm], ...], mask_b64: str }
     """
     image_b64 = payload.get("image_b64", "")
-    x = payload.get("x")
-    y = payload.get("y")
+    points = payload.get("points", [])
 
-    if not image_b64 or x is None or y is None:
-        raise HTTPException(400, "image_b64, x, y are required")
+    if not image_b64 or not points:
+        raise HTTPException(400, "image_b64 and points are required")
 
-    # Decode image
     try:
         img_data = base64.b64decode(image_b64)
         arr = np.frombuffer(img_data, np.uint8)
@@ -90,10 +91,13 @@ def segment(payload: dict):
     except RuntimeError as e:
         raise HTTPException(503, str(e))
 
+    point_coords = np.array([[p["x"], p["y"]] for p in points], dtype=np.float32)
+    point_labels = np.array([p["label"] for p in points])
+
     predictor.set_image(img_rgb)
     masks, scores, _ = predictor.predict(
-        point_coords=np.array([[x, y]], dtype=np.float32),
-        point_labels=np.array([1]),
+        point_coords=point_coords,
+        point_labels=point_labels,
         multimask_output=True,
     )
 
@@ -103,7 +107,6 @@ def segment(payload: dict):
     if not polygon:
         raise HTTPException(422, "SAM produced an empty mask")
 
-    # Encode mask as PNG b64 for optional overlay
     mask_u8 = (best_mask * 255).astype(np.uint8)
     _, buf = cv2.imencode(".png", mask_u8)
     mask_b64 = base64.b64encode(buf.tobytes()).decode()

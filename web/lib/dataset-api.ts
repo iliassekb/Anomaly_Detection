@@ -150,13 +150,12 @@ export async function saveAnnotation(
 
 export async function samSegment(
   imageB64: string,
-  x: number,
-  y: number,
+  points: { x: number; y: number; label: number }[],
 ): Promise<{ polygon: [number, number][]; mask_b64: string }> {
   const res = await fetch(`${API_URL}/api/sam/segment`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ image_b64: imageB64, x, y }),
+    body: JSON.stringify({ image_b64: imageB64, points }),
     signal: AbortSignal.timeout(30_000),
   })
   if (!res.ok) throw new Error(await res.text())
